@@ -41,7 +41,7 @@ class RobotPositioner(object):
 
     def loadsample(self):
         if self._busy():
-            print "Robot is busy."
+            print("Robot is busy.")
             return
         self._load_pv.put(1)
         self._execute_pv.put(1)
@@ -54,7 +54,7 @@ class RobotPositioner(object):
 
     def unloadsample(self):
         if self._busy():
-            print "Robot is busy."
+            print("Robot is busy.")
             return
         self._unload_pv.put(1)
         self._execute_pv.put(1)
