@@ -10,7 +10,7 @@ pe1 = AreaDetectorFileStoreTIFFSquashing(
     'XF:28IDC-ES:1{Det:PE1}',
     name='pe1',
     stats=[],
-    ioc_file_path = 'G:/pe1_data',
+    ioc_file_path = 'H:/pe1_data',
     file_path = '/home/xf28id1/pe1_data',
     shutter=shctl1,
     shutter_val=(1, 0)
