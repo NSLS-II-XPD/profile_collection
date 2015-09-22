@@ -1,0 +1,82 @@
+Summary of commands for 28-ID
+-----------------------------
+
+
+Before doing anything make sure you have an ipython prompt in the ophyd
+environment.  If you don't you can type iophyd at a linux prompt.
+
+Before beginning any experiments it's a good idea to define a phython dictionary
+with some information about your sample. Something like the following:
+
+In: mysampledict = dict(name='sample name', barcode=123456, experimenter='Dr. Dave')
+
+You can later add new fields to this dictionary as follows:
+
+In: mysampledict['new field'] = 'more info about my sample'
+
+You can also use this syntax to change the text in a field.  e.g.
+
+In: mysampledict['barcode'] = 654321
+
+The following commands have been defined for common tasks:
+
+In: thetaLoad()
+
+This will rotate the theta stage so that the sample holder is horizontal and a
+smaple can be loaded.
+
+In: thetaMeasure()
+
+This will rotate the theta stage so that the sample holder is vertical and the
+sample can be measured.
+
+In: diodeIn()
+In: diodeOut()
+
+These will move the diode in and out of the beam.
+
+The following commands will collect a single frame of data
+
+In: ct(sample=mysampledict)
+
+This will collect data on all predefined detectors and save metadata for the
+experiment with the python dictionary (mysampledict) that you defined earlier.
+
+In: dscan(diff_x, -10, 10, 20, sample=mysampledict)
+
+This will scan the translation stage along x in 20 steps from -10 to 10 (in mm)
+relative to the current position.  The same code can be used to scan along the y
+direction by replacing diff_x with diffy_y.  Again notice that we give it the
+python dictionary with our sample and experiment info.
+
+In: diffHome()
+
+This will return the diffraction stage to it's home position, currently defined
+as:
+X_HOME = 11.0
+Y_HOME = 41.0
+
+
+The general syntax for moving motors is:
+
+In: motor_name.move(number)
+
+Where motor_name is one of:
+th (theta stage)
+tth (two theta stage)
+diff_x (diffraction stage x axis)
+diff_y (diffraction stage y_axis)
+
+The following macros have also been defined:
+
+In: loadSample(samplenum, sampledict)
+
+Where samplenum is the number of the sample in the robot carousel and sampledict
+is, once again, sampledict is the python dictionary with sample info. This
+executes the following sequence:
+1. move diode into the beam
+2. move the diffraction stage back to its home position
+3. save a diode measurment with no sample
+
+When the robot is ready to be used this will also automatically load a sample
+and start a scan.
