@@ -2,7 +2,7 @@ from ophyd.controls.area_detector import (AreaDetectorFileStoreHDF5,
                                           AreaDetectorFileStoreTIFF,
                                           AreaDetectorFileStoreTIFFSquashing)
 
-from shutter import sh1
+# from shutter import sh1
 
 shctl1 = EpicsSignal('XF:28IDC-ES:1{Det:PE1}cam1:ShutterMode', name='shctl1')
 
