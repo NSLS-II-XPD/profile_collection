@@ -101,10 +101,10 @@ def show_id(scan_id, subtract_dark=True):
     else:
         _show_image(light, 'pe1_image_lightfield')
 
-from xray_vision.backend.mpl.cross_section_2d import CrossSection
 
 
 def _show_image(light, title):
+    from xray_vision.backend.mpl.cross_section_2d import CrossSection
     options = dict(cmap='gray', interpolation='nearest')
     fig = plt.figure()
     cs = CrossSection(fig)
