@@ -6,47 +6,6 @@ from gas_switcher import XPDGasSwitcher
 import time as ttime
 
 
-class NullStatus(object):
-    def __init__(self):
-        self.done = True
-
-
-class NullPositioner(object):
-
-    def __init__(self, name=None):
-        self.name = name
-        self.pvname = ['pain']
-        self.report = {'pv': 'pain'}
-
-        self.position = 0
-
-    def move_next(self, *args, **kwargs):
-        next(self.traj_iter)
-        st = NullStatus()
-        print(st.done)
-        st.done = True
-        return None, st
-
-    def move(self, position, **kwargs):
-        return NullStatus()
-
-    @property
-    def timestamp(self):
-        return [ttime.time()]
-
-    def set_trajectory(self, traj):
-        self.traj = traj
-        self.traj_iter = iter(traj)
-
-    def check_value(self, *args, **kwargs):
-        return True
-
-    def describe(self):
-        return {}
-
-    def read(self):
-        return {}
-
 robot_sample_number = EpicsSignal('XF:28IDC-ES:1{SM}ID:Tgt-SP',
         rw = True, name = 'robot_sample_number')
 robot_load_cmd = EpicsSignal('XF:28IDC-ES:1{SM}Cmd:Load-Cmd.PROC',
@@ -83,8 +42,6 @@ cs700 = PVPositioner('XF:28IDC-ES:1{Env:01}T-SP',
                      #done='XF:28IDC-ES:1{Env:01}Cmd-Busy', done_val=0,
                      stop='XF:28IDC-ES:1{Env:01}Cmd-Cmd', stop_val=13,
                      put_complete=True, name='cs700')
-
-nullmtr = NullPositioner(name='nullmtr')
 
 def thetaLoad():
     th.move(THETA_LOAD)
