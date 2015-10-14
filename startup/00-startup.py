@@ -6,6 +6,7 @@ from dataportal import (DataBroker as db,
 
 
 from bluesky.standard_config import *
+from ophyd.commands import *
 
 gs.RE.md['config'] = {}
 gs.RE.md['owner'] = 'xf28id1'
