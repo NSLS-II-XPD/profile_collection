@@ -32,6 +32,10 @@ gas = XPDGasSwitcher(requested_pos='XF:28IDC-ES:1{Env:02}Pos-SP',
         current_pos='XF:28IDC-ES:1{Env:02}Pos-I',
         gasdict = {1: 'O2', 2: 'N2', 3: 'He'})
 
+
+th_cal = EpicsMotor('XF:28IDC-ES:1{Dif:2-Ax:Th}Mtr', name='th_cal')
+tth_cal = EpicsMotor('XF:28IDC-ES:1{Dif:2-Ax:2Th}Mtr', name='tth_cal')
+
 th = EpicsMotor('XF:28IDC-ES:1{Dif:1-Ax:Th}Mtr', name='th')
 tth = EpicsMotor('XF:28IDC-ES:1{Dif:1-Ax:2ThI}Mtr', name='tth')
 diff_x = EpicsMotor('XF:28IDC-ES:1{Dif:1-Ax:X}Mtr', name='diff_x')
