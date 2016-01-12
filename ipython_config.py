@@ -1,7 +1,5 @@
 # Configuration file for ipython.
 
-import dataportal  # make sure that enaml is imported before mpl
-del dataportal
 c = get_config()
 
 #------------------------------------------------------------------------------
@@ -55,8 +53,7 @@ c.InteractiveShellApp.pylab_import_all = False
 c.StoreMagics.autorestore = True
 
 # A list of dotted module names of IPython extensions to load.
-c.InteractiveShellApp.extensions = ['ophyd.session',
-                                    'pyOlog.cli.ipy']
+c.InteractiveShellApp.extensions = ['pyOlog.cli.ipy']
 
 # Run the module as a script.
 # c.InteractiveShellApp.module_to_run = ''
