@@ -15,9 +15,10 @@ class Robot(Device):
 
     DIFF_POS = {'capilary': (1,2),}
 
-    def __init__(self, theta, diff):
+    def __init__(self, *args, theta=None, diff=None, **kwargs):
         self.theta = theta
         self.diff = diff
+        super().__init__(*args, **kwargs)
 
     def load_sample(sample_number, sample_type):
         # self.theta.move(self.TH_POS[sample_type]['load'], wait=True)
@@ -31,6 +32,6 @@ class Robot(Device):
         
 
 
-robot = Robot('XF:28IDC-ES:1{SM}')
+# robot = Robot('XF:28IDC-ES:1{SM}', th, None)
 
 # old RobotPositioner code is .ipython/profile_2015_collection/startup/robot.py
