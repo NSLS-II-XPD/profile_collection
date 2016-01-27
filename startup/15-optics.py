@@ -1,6 +1,7 @@
 "Define motors related to optics"
 
-from ophyd import EpicsMotor
+from ophyd import EpicsMotor, Device
+from ophyd import Component as Cpt
 
 # A Hutch
 ## Filter
@@ -51,15 +52,18 @@ vfm_yui = EpicsMotor('XF:28IDA-OP:1{Mir:VFM-Ax:YUI}Mtr', name='vfm_yui')
 vfm_yuo = EpicsMotor('XF:28IDA-OP:1{Mir:VFM-Ax:YUO}Mtr', name='vfm_yuo')
 vfm_y = EpicsMotor('XF:28IDA-OP:1{Mir:VFM-Ax:Y}Mtr', name='vfm_y')
 
-## Mono slits
-slt_mb1_b = EpicsMotor('XF:28IDA-OP:1{Slt:MB1-Ax:B}Mtr', name='slt_mb1_b')
-slt_mb1_i = EpicsMotor('XF:28IDA-OP:1{Slt:MB1-Ax:I}Mtr', name='slt_mb1_i')
-slt_mb1_o = EpicsMotor('XF:28IDA-OP:1{Slt:MB1-Ax:O}Mtr', name='slt_mb1_o')
-slt_mb1_t = EpicsMotor('XF:28IDA-OP:1{Slt:MB1-Ax:T}Mtr', name='slt_mb1_t')
-slt_mb1_xc = EpicsMotor('XF:28IDA-OP:1{Slt:MB1-Ax:XCtr}Mtr', name='slt_mb1_xc')
-slt_mb1_xg = EpicsMotor('XF:28IDA-OP:1{Slt:MB1-Ax:XGap}Mtr', name='slt_mb1_xg')
-slt_mb1_yc = EpicsMotor('XF:28IDA-OP:1{Slt:MB1-Ax:YCtr}Mtr', name='slt_mb1_yc')
-slt_mb1_yg = EpicsMotor('XF:28IDA-OP:1{Slt:MB1-Ax:YGap}Mtr', name='slt_mb1_yg')
+class Slits(Device):
+    t = Cpt(EpicsMotor, '-Ax:T}Mtr')
+    b = Cpt(EpicsMotor, '-Ax:B}Mtr')
+    i = Cpt(EpicsMotor, '-Ax:I}Mtr')
+    o = Cpt(EpicsMotor, '-Ax:O}Mtr')
+    xc = Cpt(EpicsMotor, '-Ax:XCtr}Mtr')
+    xg = Cpt(EpicsMotor, '-Ax:XGap}Mtr')
+    yc = Cpt(EpicsMotor, '-Ax:YCtr}Mtr')
+    yg = Cpt(EpicsMotor, '-Ax:YGap}Mtr')
+
+slt_mb1 = Slits('XF:28IDA-OP:1{Slt:MB1', name='slt_mb1')  # Mono Slits
+slt_mb2 = Slits('XF:28IDC-OP:1{Slt:MB2', name='slt_mb2')  # C Hutch Mono Slits
 
 ## BPM 2
 bpm2_ydiode = EpicsMotor('XF:28IDA-BI:1{BPM:2-Ax:YDiode}Mtr', name='bpm2_ydiode')
@@ -67,17 +71,3 @@ bpm2_yfoil = EpicsMotor('XF:28IDA-BI:1{BPM:2-Ax:YFoil}Mtr', name='bpm2_yfoil')
 
 ## FS 3
 fs3_y = EpicsMotor('XF:28IDA-BI:1{FS:3-Ax:Y}Mtr', name='fs3_y')
-
-
-# C Hutch
-## Mono slits
-
-slt_mb2_xg = EpicsMotor('XF:28IDC-OP:1{Slt:MB2-Ax:XGap}Mtr', name='slt_mb2_xg')
-slt_mb2_xc = EpicsMotor('XF:28IDC-OP:1{Slt:MB2-Ax:XCtr}Mtr', name='slt_mb2_xc')
-slt_mb2_yg = EpicsMotor('XF:28IDC-OP:1{Slt:MB2-Ax:YGap}Mtr', name='slt_mb2_yg')
-slt_mb2_yc = EpicsMotor('XF:28IDC-OP:1{Slt:MB2-Ax:YCtr}Mtr', name='slt_mb2_yc')
-
-slt_mb2_t = EpicsMotor('XF:28IDC-OP:1{Slt:MB2-Ax:T}Mtr', name='slt_mb2_t')
-slt_mb2_b = EpicsMotor('XF:28IDC-OP:1{Slt:MB2-Ax:B}Mtr', name='slt_mb2_b')
-slt_mb2_i = EpicsMotor('XF:28IDC-OP:1{Slt:MB2-Ax:I}Mtr', name='slt_mb2_i')
-slt_mb2_o = EpicsMotor('XF:28IDC-OP:1{Slt:MB2-Ax:O}Mtr', name='slt_mb2_o')
