@@ -4,7 +4,8 @@ import logging
 from databroker import DataBroker as db, get_images, get_table, get_events
 import ophyd
 from ophyd.commands import *
-
+# install callback trampoline
+setup_ophyd()
 from bluesky.standard_config import *
 
 gs.RE.md['owner'] = 'xf28id1'
