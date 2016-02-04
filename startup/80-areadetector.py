@@ -13,7 +13,7 @@ from ophyd import Component as C
 # from shutter import sh1
 
 #shctl1 = EpicsSignal('XF:28IDC-ES:1{Det:PE1}cam1:ShutterMode', name='shctl1')
-# shctl1 = EpicsSignal('XF:28IDC-ES:1{Sh:Exp}Cmd-Cmd', name='shctl1')
+shctl1 = EpicsSignal('XF:28IDC-ES:1{Sh:Exp}Cmd-Cmd', name='shctl1')
 
 class XPDTIFFPlugin(TIFFPlugin, FileStoreTIFFSquashing,
                     FileStoreIterativeWrite):
@@ -28,10 +28,10 @@ class XPDPerkinElmer(PerkinElmerDetector):
     image = C(ImagePlugin, 'image1:')
 
     tiff = C(XPDTIFFPlugin, 'TIFF1:',
-             write_path_template='H:/pe1_data/%Y/%m/%d/',
+             write_path_template='G:/pe1_data/%Y/%m/%d/',
              read_path_template='/home/xf28id1/pe1_data/%Y/%m/%d/',
              cam_name='cam',  # used to configure "tiff squashing"
-             proc_name='proc')  # ditto
+             proc_name='proc', read_attrs=[])  # ditto
 
     # hdf5 = C(XPDHDF5Plugin, 'HDF1:',
     #          write_path_template='G:/pe1_data/%Y/%m/%d/',
@@ -131,10 +131,13 @@ class PerkinElmerStandard(SingleTrigger, XPDPerkinElmer):
 
 pe1 = PerkinElmerStandard('XF:28IDC-ES:1{Det:PE1}', name='pe1', read_attrs=['tiff'],
                           configuration_attrs=['images_per_set', 'number_of_sets'])
-pe1c = PerkinElmerContinuous('XF:28IDC-ES:1{Det:PE1}', name='pe1', read_attrs=['tiff'],
+pe1c = PerkinElmerContinuous('XF:28IDC-ES:1{Det:PE1}', name='pe1',
+                             read_attrs=['tiff', 'stats1'],
                              configuration_attrs=['images_per_set', 'number_of_sets'],
                              plugin_name='tiff')
 pe1.tiff.read_attrs = []  # don't include any signals, just the image itself
+pe1c.tiff.read_attrs = []  # just the image
+pe1c.stats1.read_attrs = ['total']
 
 # some defaults, as an example of how to use this
 pe1.configure(dict(images_per_set=6, number_of_sets=10))

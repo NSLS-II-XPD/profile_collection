@@ -20,3 +20,6 @@ class CS700TemperatureController(PVPositioner):
 cs700 = CS700TemperatureController('XF:28IDC-ES:1{Env:01}', name='cs700',
                                    settle_time=10)
 cs700.done_value = 0
+cs700.read_attrs = ['setpoint', 'readback']
+cs700.readback.name = 'temperautre'
+cs700.setpoint.name = 'temperautre_setpoint'
