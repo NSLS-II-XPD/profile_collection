@@ -17,8 +17,10 @@ class CS700TemperatureController(PVPositioner):
         status._finished()
         return status
 
-cs700 = CS700TemperatureController('XF:28IDC-ES:1{Env:01}', name='cs700',
-                                   settle_time=10)
+cs700 = CS700TemperatureController('XF:28IDC-ES:1{Env:01}', name='cs700')
+# this functionality never worked, has now been removed, but will shortly be
+# coming back
+#                                   settle_time=10)
 cs700.done_value = 0
 cs700.read_attrs = ['setpoint', 'readback']
 cs700.readback.name = 'temperautre'
