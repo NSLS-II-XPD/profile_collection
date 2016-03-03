@@ -14,8 +14,8 @@ import time as ttime
 from databroker import DataBroker as db, get_events
 
 # 
-from bluesky.broker_callbacks import verify_files_saved
-gs.RE.subscribe('stop', verify_files_saved)
+from bluesky.broker_callbacks import verify_files_saved, post_run
+gs.RE.subscribe('stop', post_run(verify_files_saved))
 
 
 # Alternatively,

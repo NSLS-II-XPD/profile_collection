@@ -7,13 +7,46 @@ from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
                                                  FileStoreHDF5IterativeWrite,
                                                  FileStoreTIFFSquashing,
                                                  FileStoreTIFF)
-from ophyd import Signal
+from ophyd import Signal, EpicsSignal # Tim test
 from ophyd import Component as C
 
 # from shutter import sh1
 
 #shctl1 = EpicsSignal('XF:28IDC-ES:1{Det:PE1}cam1:ShutterMode', name='shctl1')
 shctl1 = EpicsSignal('XF:28IDC-ES:1{Sh:Exp}Cmd-Cmd', name='shctl1')
+
+class SavedImageSignal(Signal):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.stashed_datakey = {}
+
+    def describe(self):
+        ret = super().describe()
+        ret[self.name].update(self.stashed_datakey)
+        return ret
+
+
+def take_dark(cam, light_field, dark_field_name):
+    # close shutter
+    
+    # take the dark frame
+    cam.stage()
+    st = cam.trigger()
+    while not st.done:
+        ttime.sleep(.1)
+    ret = cam.read()
+    desc = cam.describe()
+    cam.unstage()
+
+    # save the df uid
+    df = ret[light_field]
+    df_sig = getattr(cam, dark_field_name)
+    df_sig.put(**df)
+    # save the darkfrom description
+    df_sig.stashed_datakey = desc[light_field]
+    
+    
+
 
 class XPDTIFFPlugin(TIFFPlugin, FileStoreTIFFSquashing,
                     FileStoreIterativeWrite):
@@ -51,6 +84,8 @@ class XPDPerkinElmer(PerkinElmerDetector):
     stats4 = C(StatsPlugin, 'Stats4:')
     stats5 = C(StatsPlugin, 'Stats5:')
 
+    # dark_image = C(SavedImageSignal, None)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.stage_sigs.update([(self.cam.trigger_mode, 'Internal'),
@@ -85,6 +120,8 @@ class ContinuousAcquisitionTrigger(BlueskyInterface):
             raise RuntimeError("The ContinuousAcuqisitionTrigger expects "
                                "the detector to already be acquiring.")
         super().stage()
+        # put logic to look up proper dark frame
+        # die if none is found
 
     def trigger(self):
         "Trigger one acquisition."
