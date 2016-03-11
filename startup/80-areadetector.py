@@ -7,13 +7,41 @@ from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
                                                  FileStoreHDF5IterativeWrite,
                                                  FileStoreTIFFSquashing,
                                                  FileStoreTIFF)
-from ophyd import Signal, EpicsSignal # Tim test
+from ophyd import Signal, EpicsSignal, EpicsSignalRO # Tim test
 from ophyd import Component as C
+from ophyd import PVPositioner
+from ophyd import StatusBase
 
 # from shutter import sh1
 
 #shctl1 = EpicsSignal('XF:28IDC-ES:1{Det:PE1}cam1:ShutterMode', name='shctl1')
 shctl1 = EpicsSignal('XF:28IDC-ES:1{Sh:Exp}Cmd-Cmd', name='shctl1')
+
+
+class XPDShutter(Device):
+    cmd = C(EpicsSignal, 'Cmd-Cmd')
+    close_sts = C(EpicsSignalRO, 'Sw:Cls1-Sts')
+    open_sts = C(EpicsSignalRO, 'Sw:Opn1-Sts')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._st = None
+        self._target = None
+
+    def set(self, value, *, wait=False, **kwargs):
+        if wait:
+            raise RuntimeError()
+        if self._st is not None:
+            raise RuntimeError()
+        
+        self._st = st = DeviceStatus(self, timeout=10)
+        self.cmd.put(value)
+
+        return st
+
+    def _watcher(self, *, old_vlaue=None, new_value=None, **kwargs):
+        pass
+
 
 class SavedImageSignal(Signal):
     def __init__(self, *args, **kwargs):
@@ -61,7 +89,7 @@ class XPDPerkinElmer(PerkinElmerDetector):
     image = C(ImagePlugin, 'image1:')
 
     tiff = C(XPDTIFFPlugin, 'TIFF1:',
-             write_path_template='G:/pe1_data/%Y/%m/%d/',
+             write_path_template='H:/pe1_data/%Y/%m/%d/',
              read_path_template='/home/xf28id1/pe1_data/%Y/%m/%d/',
              cam_name='cam',  # used to configure "tiff squashing"
              proc_name='proc', read_attrs=[])  # ditto
@@ -119,7 +147,7 @@ class ContinuousAcquisitionTrigger(BlueskyInterface):
         if self.cam.acquire.get() != 1:
             raise RuntimeError("The ContinuousAcuqisitionTrigger expects "
                                "the detector to already be acquiring.")
-        super().stage()
+        return super().stage()
         # put logic to look up proper dark frame
         # die if none is found
 
