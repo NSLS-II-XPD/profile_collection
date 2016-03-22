@@ -27,19 +27,52 @@ class XPDShutter(Device):
         super().__init__(*args, **kwargs)
         self._st = None
         self._target = None
+        self.close_sts.subscribe(self._watcher_close,
+                                 self.close_sts.SUB_VALUE)
+
+        self.open_sts.subscribe(self._watcher_open,
+                                 self.open_sts.SUB_VALUE)
 
     def set(self, value, *, wait=False, **kwargs):
+        if value not in ('Open', 'Close'):
+            raise ValueError(
+                "must be 'Open' or 'Close', not {!r}".format(value))
         if wait:
             raise RuntimeError()
         if self._st is not None:
             raise RuntimeError()
-        
-        self._st = st = DeviceStatus(self, timeout=10)
+        self._target = value
+        self._st = st = DeviceStatus(self, timeout=None)
         self.cmd.put(value)
 
         return st
 
-    def _watcher(self, *, old_vlaue=None, new_value=None, **kwargs):
+    def _watcher_open(self, *, old_value=None, value=None, **kwargs):
+        print("in open watcher", old_value, value)
+        if self._target != 'Open':
+            return
+        if self._st is None:
+            return
+
+        if new_value:
+            self._st._finished()
+            self._target = None
+            self._st = None
+        print("in open watcher")
+
+    def _watcher_close(self, *, old_value=None, value=None, **kwargs):
+        print("in close watcher", old_value, value)
+        if self._target != 'Close':
+            return
+
+        if self._st is None:
+            return
+
+        if new_value:
+            self._st._finished()
+            self._target = None
+            self._st = None
+
         pass
 
 
