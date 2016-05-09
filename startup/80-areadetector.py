@@ -1,3 +1,4 @@
+import time as ttime
 from ophyd.areadetector import (PerkinElmerDetector, ImagePlugin,
                                 TIFFPlugin, StatsPlugin, HDF5Plugin,
                                 ProcessPlugin)
