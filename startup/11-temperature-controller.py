@@ -16,28 +16,15 @@ class CS700TemperatureController(PVPositioner):
         # There is nothing to do. Just report that we are done.
         # Note: This really should not necessary to do --
         # future changes to PVPositioner may obviate this code.
-        status = DeviceStatus()
+        status = DeviceStatus(self)
         status._finished()
         return status
 
-cs700 = CS700TemperatureController('XF:28IDC-ES:1{Env:01}', name='cs700')
-# this functionality never worked, has now been removed, but will shortly be
-# coming back
-#                                   settle_time=10)
+# To allow for sample temperature equilibration time, increase
+# the `settle_time` parameter (units: seconds).
+cs700 = CS700TemperatureController('XF:28IDC-ES:1{Env:01}', name='cs700',
+                                   settle_time=0)
 cs700.done_value = 0
 cs700.read_attrs = ['setpoint', 'readback']
 cs700.readback.name = 'temperature'
 cs700.setpoint.name = 'temperature_setpoint'
-
-
-
-
-
-
-
-
-
-
-
-
-
