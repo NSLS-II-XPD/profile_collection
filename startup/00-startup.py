@@ -2,6 +2,8 @@ import logging
 
 # Import these things for convenience.
 from databroker import DataBroker as db, get_images, get_table, get_events
+# 0304 test
+from databroker import process
 import ophyd
 from ophyd.commands import *
 # install callback trampoline

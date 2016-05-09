@@ -8,6 +8,9 @@ class CS700TemperatureController(PVPositioner):
     readback = C(EpicsSignalRO, 'T-I')
     done = C(EpicsSignalRO, 'Cmd-Busy')
     stop_signal = C(EpicsSignal, 'Cmd-Cmd')
+    
+    def set(self, *args, timeout=None, **kwargs):
+        return super().set(*args, timeout=timeout, **kwargs)
 
     def trigger(self):
         # There is nothing to do. Just report that we are done.
@@ -23,5 +26,18 @@ cs700 = CS700TemperatureController('XF:28IDC-ES:1{Env:01}', name='cs700')
 #                                   settle_time=10)
 cs700.done_value = 0
 cs700.read_attrs = ['setpoint', 'readback']
-cs700.readback.name = 'temperautre'
-cs700.setpoint.name = 'temperautre_setpoint'
+cs700.readback.name = 'temperature'
+cs700.setpoint.name = 'temperature_setpoint'
+
+
+
+
+
+
+
+
+
+
+
+
+
