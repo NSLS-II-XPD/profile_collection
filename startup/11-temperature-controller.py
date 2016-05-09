@@ -4,8 +4,8 @@ from ophyd.device import DeviceStatus
 
 
 class CS700TemperatureController(PVPositioner):
-    setpoint = C(EpicsSignal, 'T-SP')
     readback = C(EpicsSignalRO, 'T-I')
+    setpoint = C(EpicsSignal, 'T-SP')
     done = C(EpicsSignalRO, 'Cmd-Busy')
     stop_signal = C(EpicsSignal, 'Cmd-Cmd')
     

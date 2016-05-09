@@ -9,7 +9,6 @@ from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
                                                  FileStoreTIFF)
 from ophyd import Signal, EpicsSignal, EpicsSignalRO # Tim test
 from ophyd import Component as C
-from ophyd import PVPositioner
 from ophyd import StatusBase
 
 # from shutter import sh1
