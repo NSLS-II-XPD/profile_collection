@@ -32,7 +32,7 @@ def find_peaks(chi, sides=6, intensity_threshold=0):
 
 def get_energy_from_std_tth(x, y, d_spacings, ns, plot=False):
     # step 1 get the zero
-    auto_corr = np.correlate(y, y, mode='same')
+    auto_corr = np.correlate(y, y[::-1], mode='same')
     plt.plot(x, auto_corr)
     plt.show()
 
@@ -50,22 +50,39 @@ def get_energy_from_std_tth(x, y, d_spacings, ns, plot=False):
     # step 2 get all the maxima worth looking at
 
     l, r, c = find_peaks(y)
-    print(l, r, c)
-    lmfig_centers = []
+    r_centers = c[c > zero_point]
+    l_centers = c[c < zero_point]
+    print(x[l_centers], x[r_centers])
+
+    r_dists = np.abs(np.asarray(x[r_centers]) - zero_point)
+    l_dists = np.abs(np.asarray(x[l_centers]) - zero_point)
+    print(l_dists, r_dists)
+
+    lmfit_centers = []
     for lidx, ridx, peak_center in zip(l, r, c):
         mod = VoigtModel()
         pars = mod.guess(y[lidx: ridx],
                          x=x[lidx: ridx])
         out = mod.fit(y[lidx: ridx], pars,
                       x=x[lidx: ridx])
-        lmfig_centers.append(out.values['center'])
+        lmfit_centers.append(out.values['center'])
+
+    # step 2.5 refine the zero
+    r_centers = lmfit_centers[lmfit_centers > 0.0]
+    l_centers = lmfit_centers[lmfit_centers < 0.0]
+
+    r_dists = np.abs(np.asarray(r_centers) - zero_point)
+    l_dists = np.abs(np.asarray(l_centers) - zero_point)
+    print(r_dists, l_dists)
+
     if plot:
         plt.plot(new_x, y)
         plt.plot(new_x[c], y[c], 'ro')
         plt.show()
+    AAA
 
     wavelengths = []
-    for center, d, n in zip(lmfig_centers, d_spacings, ns):
+    for center, d, n in zip(lmfit_centers, d_spacings, ns):
         wavelengths.append(lamda_from_bragg(center, d, n))
     return np.average(wavelengths)
 
@@ -85,14 +102,11 @@ if __name__ == '__main__':
     a = np.loadtxt('/home/cwright/Downloads/Lab6_67p8.chi')
     x = a[:, 0]
     x = np.hstack((np.zeros(1), x))
-    print(x.shape)
     x = np.hstack((-x[::-1], x))
     y = a[:, 1]
     y = np.hstack((np.zeros(1), y))
     y = np.hstack((y[::-1], y))
 
-    x = x[3:]
-    y = y[3:]
-    plt.plot(np.linspace(0, 10, x.shape[0]), y)
-    plt.show()
+    x = x[10:]
+    y = y[10:]
     get_energy_from_std_tth(x, y, [], [], plot=True)
