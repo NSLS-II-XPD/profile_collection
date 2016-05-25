@@ -4,8 +4,10 @@ from lmfit.models import VoigtModel
 from scipy.signal import argrelmax
 import matplotlib.pyplot as plt
 
+
 def lamda_from_bragg(th, d, n):
     return 2 * d * np.sin(th / 2.) / n
+
 
 def find_peaks(chi, sides=6, intensity_threshold=0):
     # Find all potential peaks
@@ -31,55 +33,30 @@ def find_peaks(chi, sides=6, intensity_threshold=0):
     return left_idxs, right_idxs, peak_centers
 
 
-def get_energy_from_std_tth(x, y, d_spacings, ns, plot=False):
+def get_wavelength_from_std_tth(x, y, d_spacings, ns, plot=False):
     """
+    Return the wavelength from a two theta scan of a standard
 
-    :param x:
-    :param y:
-    :param d_spacings:
-    :param ns:
-    :param plot:
-    :return:
+    Parameters
+    ----------
+    x: ndarray
+        the two theta coordinates
+    y: ndarray
+        the detector intensity
+    d_spacings: ndarray
+        the dspacings of the standard
+    ns: ndarray
+        the multiplicity of the reflection
+    plot: bool
+        If true plot some of the intermediate data
+    Returns
+    -------
+    float:
+        The average wavelength
+    float:
+        The standard deviation of the wavelength
     """
-    '''
-    # step 1 get the zero
-    # Sweep y across reversed y. Multiply the overlapping elements and take
-    # the mean.
-    autocorr = ([np.mean(y[-i:] * y[::-1][:i]) for i in np.arange(1, len(y))] +
-                [np.mean(y[:-i] * y[::-1][i:]) for i in np.arange(1, len(y))])
-
-    # Find offset i that produced max autocorr.
-    # Ignore edges, effectively assuming that the true center is within
-    # the central two quartiles of the array's length.
-    margin = int(0.5 * len(y))
-    offset = margin + np.argmax(autocorr[margin:-margin])
-
-    zero_point = np.sign(offset) * (len(y) - abs(offset)) // 2
-    print(offset, zero_point)
-    plt.plot(autocorr)
-    plt.show()
-
-    new_x = x + zero_point
-    if plot:
-        plt.plot(x, y, 'b')
-        # plt.plot(x[zero_point], y[zero_point], 'ro')
-        plt.plot(new_x, y, 'g')
-        plt.show()
-
-
-    # step 2 get all the maxima worth looking at
-    '''
     l, r, c = find_peaks(y)
-    '''
-    r_centers = c[c > zero_point]
-    l_centers = c[c < zero_point]
-    print(x[l_centers], x[r_centers])
-
-    r_dists = np.abs(np.asarray(x[r_centers]) - zero_point)
-    l_dists = np.abs(np.asarray(x[l_centers]) - zero_point)
-    print(l_dists, r_dists)
-
-    '''
     lmfit_centers = []
     for lidx, ridx, peak_center in zip(l, r, c):
         mod = VoigtModel()
@@ -89,15 +66,6 @@ def get_energy_from_std_tth(x, y, d_spacings, ns, plot=False):
                       x=x[lidx: ridx])
         lmfit_centers.append(out.values['center'])
     lmfit_centers = np.asarray(lmfit_centers)
-    '''
-    # step 2.5 refine the zero
-    r_centers = lmfit_centers[lmfit_centers > 0.0]
-    l_centers = lmfit_centers[lmfit_centers < 0.0]
-
-    r_dists = np.abs(np.asarray(r_centers) - zero_point)
-    l_dists = np.abs(np.asarray(l_centers) - zero_point)
-    print(r_dists, l_dists)
-    '''
     if plot:
         plt.plot(x, y)
         plt.plot(x[c], y[c], 'ro')
@@ -114,26 +82,29 @@ def get_energy_from_std_tth(x, y, d_spacings, ns, plot=False):
     print(wavelengths)
     return np.average(wavelengths), np.std(wavelengths)
 
+
 if __name__ == '__main__':
     import os
+
     calibration_file = os.path.join('../../data/LaB6_d.txt')
 
     # step 0 load data
     d_spacings = np.loadtxt(calibration_file)
-    # ns = np.ones(len(d_spacings))
-
-    # x = np.linspace(-np.pi, np.pi, 100)
-    # y = np.sin(x)
-    # x = np.linspace(-np.pi+1, np.pi, 100)
     a = np.loadtxt('../../data/Lab6_67p8.chi')
-    x = a[:, 0]
-    x = np.hstack((np.zeros(1), x))
-    x = np.hstack((-x[::-1], x))
-    y = a[:, 1]
-    y = np.hstack((np.zeros(1), y))
-    y = np.hstack((y[::-1], y))
+    wavechange = []
+    b = np.linspace(.1, 3, 100)
+    for dx in b:
+        x = a[:, 0]
+        x = np.hstack((np.zeros(1), x))
+        x = np.hstack((-x[::-1], x))
+        y = a[:, 1]
+        y = np.hstack((np.zeros(1), y))
+        y = np.hstack((y[::-1], y))
 
-    x = x[:]
-    y = y[:]
-    print(get_energy_from_std_tth(x, y, d_spacings, np.ones(d_spacings.shape),
-                            plot=True))
+        x = x[:] + dx
+        y = y[:]
+        wavechange.append(get_energy_from_std_tth(x, y, d_spacings,
+                                                  np.ones(d_spacings.shape),
+                                                  )[0])
+    plt.plot(b, wavechange)
+    plt.show()
