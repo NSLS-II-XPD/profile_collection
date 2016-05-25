@@ -81,6 +81,47 @@ def get_wavelength_from_std_tth(x, y, d_spacings, ns, plot=False):
     return np.average(wavelengths), np.std(wavelengths)
 
 
+from bluesky.callbacks import CollectThenCompute
+
+
+class ComputeWavelength(CollectThenCompute):
+    """
+    Example
+    -------
+    >>> cw = ComputeWavelgnth('tth_cal', 'some_detector', d_spacings, ns) 
+    >>> RE(scan(...), cw)
+    """
+    CONVERSION_FACTOR = 12.3984  # keV-Angstroms
+    def __init__(self, x_name, y_name, d_spacings, ns=None):
+        self.x_name = x_name
+        self.y_name = y_name
+        self.d_spacings = d_spacings
+        self.wavelength = None
+        self.wavelength_std = None
+        if ns is None:
+            self.ns = np.ones(self.d_spacings.shape)
+        else:
+            self.ns = ns
+
+    @property
+    def energy(self):
+        if self.wavelength is None:
+            return None
+        else:
+            return self.CONVERSION_FACTOR / self.wavelength
+
+    def compute(self):
+        x = []
+        y = []
+        for event in self._events:
+            x.append(event['data'][self.x_name])
+            y.append(event['data'][self.y_name])
+
+        self.wavelength, self.wavelength_std = get_wavelength_from_std_tth(x, y, self.d_spacings, self.ns)
+        print('wavelength', self.wavelength, '+-', self.wavelength_std)
+        print('energy', self.energy)
+    
+"""
 if __name__ == '__main__':
     import os
 
@@ -107,3 +148,4 @@ if __name__ == '__main__':
                                                       )[0])
         plt.plot(b, wavechange)
     plt.show()
+"""
