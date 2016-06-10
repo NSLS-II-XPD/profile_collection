@@ -93,6 +93,8 @@ class ComputeWavelength(CollectThenCompute):
     """
     CONVERSION_FACTOR = 12.3984  # keV-Angstroms
     def __init__(self, x_name, y_name, d_spacings, ns=None):
+        self._descriptors = []
+        self._events = []
         self.x_name = x_name
         self.y_name = y_name
         self.d_spacings = d_spacings
@@ -117,6 +119,8 @@ class ComputeWavelength(CollectThenCompute):
             x.append(event['data'][self.x_name])
             y.append(event['data'][self.y_name])
 
+        x = np.array(x)
+        y = np.array(y)
         self.wavelength, self.wavelength_std = get_wavelength_from_std_tth(x, y, self.d_spacings, self.ns)
         print('wavelength', self.wavelength, '+-', self.wavelength_std)
         print('energy', self.energy)
