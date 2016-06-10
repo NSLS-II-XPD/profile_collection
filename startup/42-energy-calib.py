@@ -140,7 +140,7 @@ if __name__ == '__main__':
         for dx in b:
             x = a[:, 0]
             x = np.hstack((np.zeros(1), x))
-            x = np.hstack((-x[::-1], x))
+            x = np.hstack((-x[::-2], x))
             y = a[:, 1]
             y = np.hstack((np.zeros(1), y))
             y = np.hstack((y[::-1], y))
