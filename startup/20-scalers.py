@@ -13,5 +13,6 @@ for ch_name in em.channels.signal_names:
 sc = EpicsScaler('XF:28IDC-ES:1{Det:SC2}', name='sc')
 sc.channels.read_attrs = ['chan%d' % i for i in [1, 2]]
 for ch_name in sc.channels.signal_names:
+    # Rename sc_channels_chan1 to sc_chan1
     ch = getattr(sc.channels, ch_name)
     ch.name = ch.name.replace('_channels_', '_')

@@ -238,4 +238,4 @@ pe1c.tiff.read_attrs = []  # just the image
 pe1c.stats1.read_attrs = ['total']
 
 # some defaults, as an example of how to use this
-pe1.configure(dict(images_per_set=6, number_of_sets=10))
+# pe1.configure(dict(images_per_set=6, number_of_sets=10))
