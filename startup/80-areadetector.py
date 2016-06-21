@@ -3,7 +3,7 @@ from ophyd.areadetector import (PerkinElmerDetector, ImagePlugin,
                                 TIFFPlugin, StatsPlugin, HDF5Plugin,
                                 ProcessPlugin)
 from ophyd.device import BlueskyInterface
-from ophyd.areadetector.trigger_mixins import SingleTrigger
+from ophyd.areadetector.trigger_mixins import SingleTrigger, MultiTrigger
 from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
                                                  FileStoreHDF5IterativeWrite,
                                                  FileStoreTIFFSquashing,
@@ -222,13 +222,23 @@ class ContinuousAcquisitionTrigger(BlueskyInterface):
 class PerkinElmerContinuous(ContinuousAcquisitionTrigger, XPDPerkinElmer):
     pass
 
+
 class PerkinElmerStandard(SingleTrigger, XPDPerkinElmer):
     pass
 
 
+class PerkinElmerMulti(MultiTrigger, XPDPerkinElmer):
+    shutter = C(EpicsSignal, 'XF:28IDC-ES:1{Sh:Exp}Cmd-Cmd')
+
 
 pe1 = PerkinElmerStandard('XF:28IDC-ES:1{Det:PE1}', name='pe1', read_attrs=['tiff'],
                           configuration_attrs=['images_per_set', 'number_of_sets'])
+
+pe1m = PerkinElmerMulti('XF:28IDC-ES:1{Det:PE1}', name='pe1', read_attrs=['tiff'],
+                        configuration_attrs=['images_per_set', 'number_of_sets'],
+                        trigger_cycle=[[('image', {shctl1: 1}),
+                                        ('dark_image', {shctl1: 0})]])
+
 pe1c = PerkinElmerContinuous('XF:28IDC-ES:1{Det:PE1}', name='pe1',
                              read_attrs=['tiff', 'stats1'],
                              configuration_attrs=['images_per_set', 'number_of_sets'],
