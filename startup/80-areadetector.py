@@ -1,7 +1,7 @@
 import time as ttime
 from ophyd.areadetector import (PerkinElmerDetector, ImagePlugin,
                                 TIFFPlugin, StatsPlugin, HDF5Plugin,
-                                ProcessPlugin)
+                                ProcessPlugin, ROIPlugin)
 from ophyd.device import BlueskyInterface
 from ophyd.areadetector.trigger_mixins import SingleTrigger, MultiTrigger
 from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
@@ -144,6 +144,11 @@ class XPDPerkinElmer(PerkinElmerDetector):
     stats3 = C(StatsPlugin, 'Stats3:')
     stats4 = C(StatsPlugin, 'Stats4:')
     stats5 = C(StatsPlugin, 'Stats5:')
+
+    roi1 = C(ROIPlugin, 'ROI1:')
+    roi2 = C(ROIPlugin, 'ROI2:')
+    roi3 = C(ROIPlugin, 'ROI3:')
+    roi4 = C(ROIPlugin, 'ROI4:')
 
     # dark_image = C(SavedImageSignal, None)
 
