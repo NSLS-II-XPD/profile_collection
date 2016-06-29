@@ -27,3 +27,13 @@ def Ecal(start=-4, stop=-1.5, step_size=0.01):
     plan = subs_wrapper(plan, subs)
 
     yield from plan
+
+
+def MED(gas_name):
+    """
+    Example
+    -------
+    >>> RE(MED('O2'))
+    """
+    yield from abs_set(gas, gas_name)
+    
