@@ -1,4 +1,5 @@
 from ophyd import PVPositioner, EpicsSignal, EpicsSignalRO
+from ophyd.mixins import EpicsSignalPositioner
 from ophyd import Component as C
 from ophyd.device import DeviceStatus
 
@@ -28,3 +29,8 @@ cs700.done_value = 0
 cs700.read_attrs = ['setpoint', 'readback']
 cs700.readback.name = 'temperature'
 cs700.setpoint.name = 'temperature_setpoint'
+
+
+eurotherm = EpicsSignalPositioner('XF:28IDC-ES:1{Env:04}T-I',
+                                  write_pv='XF:28IDC-ES:1{Env:04}T-SP',
+                                  tolerance=10)
