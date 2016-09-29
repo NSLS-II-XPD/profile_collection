@@ -4,9 +4,35 @@ setup_ophyd()
 
 # Subscribe metadatastore to documents.
 # If this is removed, data is not saved to metadatastore.
-import metadatastore.commands
 from bluesky.global_state import gs
-gs.RE.subscribe_lossless('all', metadatastore.commands.insert)
+
+from metadatastore.mds import MDS
+# from metadataclient.mds import MDS
+from databroker import Broker
+from databroker.core import register_builtin_handlers
+from filestore.fs import FileStore
+
+# pull from /etc/metadatastore/connection.yaml
+_mds_config = {'host': 'xf28id-ca1.cs.nsls2.local',
+               'database': 'datastore',
+               'port': 27017,
+               'timezone': 'US/Eastern'}
+_fs_config = {'host': 'xf28id-ca1.cs.nsls2.local',
+               'database': 'filestore',
+               'port': 27017}
+
+
+mds = MDS(_mds_config, auth=False)
+# mds = MDS({'host': CA, 'port': 7770})
+
+# pull configuration from /etc/filestore/connection.yaml
+db = Broker(mds, FileStore(_fs_config))
+register_builtin_handlers(db.fs)
+
+
+
+gs.RE.subscribe_lossless('all', mds.insert)
+
 
 # Verify files exist at the end of a run an print confirmation message.
 from bluesky.callbacks.broker import verify_files_saved, post_run
