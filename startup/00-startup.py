@@ -29,6 +29,9 @@ mds = MDS(_mds_config, auth=False)
 db = Broker(mds, FileStore(_fs_config))
 register_builtin_handlers(db.fs)
 
+def ensure_proposal_id(md):
+    if 'sample_number' not in md:
+        raise ValueError("You forgot the proposal_id.")
 
 
 gs.RE.subscribe_lossless('all', mds.insert)
@@ -57,12 +60,12 @@ from bluesky.plans import (count, scan, relative_scan, inner_product_scan,
 from bluesky.callbacks import *
 from bluesky.spec_api import *
 from bluesky.global_state import gs, abort, stop, resume
-from databroker import (DataBroker as db, get_events, get_images,
-                                get_table, get_fields, restream, process)
 from time import sleep
 import numpy as np
 
 RE = gs.RE  # convenience alias
+
+# RE.md_validator = ensure_proposal_id
 
 # Uncomment the following lines to turn on verbose messages for debugging.
 # import logging

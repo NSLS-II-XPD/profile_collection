@@ -1,6 +1,6 @@
 from __future__ import division, print_function
 import numpy as np
-from lmfit.models import VoigtModel
+from lmfit.models import VoigtModel, LinearModel
 from scipy.signal import argrelmax
 import matplotlib.pyplot as plt
 
@@ -56,21 +56,38 @@ def get_wavelength_from_std_tth(x, y, d_spacings, ns, plot=False):
     float:
         The standard deviation of the wavelength
     """
-    l, r, c = find_peaks(y)
+    l, r, c = find_peaks(y, sides=12)
+    n_sym_peaks = len(c)//2
     lmfit_centers = []
     for lidx, ridx, peak_center in zip(l, r, c):
-        mod = VoigtModel()
-        pars = mod.guess(y[lidx: ridx],
-                         x=x[lidx: ridx])
-        out = mod.fit(y[lidx: ridx], pars,
-                      x=x[lidx: ridx])
+        suby = y[lidx:ridx]
+        subx = x[lidx:ridx]
+        mod1 = VoigtModel()
+        mod2 = LinearModel()
+        pars1 = mod1.guess(suby, x=subx)
+        pars2 = mod2.make_params(slope=0, intercept=0)
+        mod = mod1+mod2
+        pars = pars1+pars2
+        out = mod.fit(suby, pars, x=subx)
         lmfit_centers.append(out.values['center'])
+        if plot:
+            plt.plot(subx, out.best_fit, '--')
+            plt.plot(subx, suby - out.best_fit, '.')
     lmfit_centers = np.asarray(lmfit_centers)
     if plot:
-        plt.plot(x, y)
+        plt.plot(x, y, 'b')
         plt.plot(x[c], y[c], 'ro')
+        plt.plot(x, np.zeros(x.shape), 'k.')
         plt.show()
 
+    offset = []
+    for i in range(0, n_sym_peaks):
+        o = (np.abs(lmfit_centers[i]) -  np.abs(lmfit_centers[2*n_sym_peaks-i-1]))/2.
+        # print(o)
+        offset.append(o)
+    print('predicted offset {}'.format(np.median(offset)))
+    lmfit_centers += np.median(offset)
+    print(lmfit_centers)
     wavelengths = []
     l_peaks = lmfit_centers[lmfit_centers < 0.]
     r_peaks = lmfit_centers[lmfit_centers > 0.]
@@ -78,7 +95,7 @@ def get_wavelength_from_std_tth(x, y, d_spacings, ns, plot=False):
         for peak_center, d, n in zip(peak_set, d_spacings, ns):
             tth = np.deg2rad(np.abs(peak_center))
             wavelengths.append(lamda_from_bragg(tth, d, n))
-    return np.average(wavelengths), np.std(wavelengths)
+    return np.average(wavelengths), np.std(wavelengths), np.median(offset)
 
 
 from bluesky.callbacks import CollectThenCompute
@@ -100,6 +117,7 @@ class ComputeWavelength(CollectThenCompute):
         self.d_spacings = d_spacings
         self.wavelength = None
         self.wavelength_std = None
+        self.offset = None
         if ns is None:
             self.ns = np.ones(self.d_spacings.shape)
         else:
@@ -121,7 +139,7 @@ class ComputeWavelength(CollectThenCompute):
 
         x = np.array(x)
         y = np.array(y)
-        self.wavelength, self.wavelength_std = get_wavelength_from_std_tth(x, y, self.d_spacings, self.ns)
+        self.wavelength, self.wavelength_std, self.offset = get_wavelength_from_std_tth(x, y, self.d_spacings, self.ns)
         print('wavelength', self.wavelength, '+-', self.wavelength_std)
         print('energy', self.energy)
     
@@ -129,27 +147,31 @@ class ComputeWavelength(CollectThenCompute):
 if __name__ == '__main__':
     import os
 
-    calibration_file = os.path.join('../../data/LaB6_d.txt')
-
     # step 0 load data
+    calibration_file = os.path.join('../../data/LaB6_d.txt')
     d_spacings = np.loadtxt(calibration_file)
+    
     for data_file in ['../../data/Lab6_67p8.chi', '../../data/Lab6_67p6.chi']:
         a = np.loadtxt(data_file)
         wavechange = []
-        b = np.linspace(.1, 3, 100)
+        x = a[:, 0]
+        #x = np.hstack((np.zeros(1), x))
+        x = np.hstack((-x[::-1], x))
+        y = a[:, 1]
+        #y = np.hstack((np.zeros(1), y))
+        y = np.hstack((y[::-1], y))
+        b = np.linspace(0, 3, 100)
         for dx in b:
-            x = a[:, 0]
-            x = np.hstack((np.zeros(1), x))
-            x = np.hstack((-x[::-2], x))
-            y = a[:, 1]
-            y = np.hstack((np.zeros(1), y))
-            y = np.hstack((y[::-1], y))
-
-            x = x[:] + dx
-            y = y[:]
-            wavechange.append(get_wavelength_from_std_tth(x, y, d_spacings,
-                                                      np.ones(d_spacings.shape),
-                                                      )[0])
-        plt.plot(b, wavechange)
+            print('added offset {}'.format(dx))
+            off_x = x[:] + dx
+            rv1, rv2, rv3 = get_wavelength_from_std_tth(off_x, y, d_spacings,
+                    np.ones(d_spacings.shape), 
+#plot=True
+                    )
+            print(rv1, rv2, rv3)
+            print()
+            wavechange.append(rv1)
+            #input()
+        plt.plot(b, wavechange/np.mean(wavechange))
     plt.show()
 """

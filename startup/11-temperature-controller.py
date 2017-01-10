@@ -31,6 +31,11 @@ cs700.readback.name = 'temperature'
 cs700.setpoint.name = 'temperature_setpoint'
 
 
-eurotherm = EpicsSignalPositioner('XF:28IDC-ES:1{Env:04}T-I',
-                                  write_pv='XF:28IDC-ES:1{Env:04}T-SP',
-                                  tolerance=10)
+class Eurotherm(EpicsSignalPositioner):
+    def set(self, *args, **kwargs):
+        # override #@!$(#$ hard-coded timeouts
+        return super().set(*args, timeout=1000000, **kwargs)
+
+eurotherm = Eurotherm('XF:28IDC-ES:1{Env:04}T-I',
+                                 write_pv='XF:28IDC-ES:1{Env:04}T-SP',
+                                 tolerance= 3, name='eurotherm')
