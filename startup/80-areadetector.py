@@ -123,7 +123,7 @@ class XPDPerkinElmer(PerkinElmerDetector):
 
     tiff = C(XPDTIFFPlugin, 'TIFF1:',
              write_path_template='H:/pe1_data/%Y/%m/%d/',
-             read_path_template='/home/xf28id1/pe1_data/%Y/%m/%d/',
+             read_path_template='/direct/XF28ID1/pe1_data/%Y/%m/%d/',
              cam_name='cam',  # used to configure "tiff squashing"
              proc_name='proc', read_attrs=[])  # ditto
 
