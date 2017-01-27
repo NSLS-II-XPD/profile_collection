@@ -78,7 +78,7 @@ def Ecal(guessed_energy, guessed_amplitude=1000, margin=0.5):
     print('will scan from {} to {}'.format(start, stop))
 
     def peaks(x, c0, wavelength, a1, a2, a3, sigma):
-        c1, c2, c3 = np.rad2deg(2 * np.arcsin(guessed_wavelength / (2 * D)))
+        c1, c2, c3 = np.rad2deg(2 * np.arcsin(wavelength / (2 * D)))
         result = (voigt(x=x, amplitude=a1, center=c0 - c1, sigma=sigma) +
                   voigt(x=x, amplitude=a1, center=c0 + c1, sigma=sigma) +
                   voigt(x=x, amplitude=a2, center=c0 - c2, sigma=sigma) +
