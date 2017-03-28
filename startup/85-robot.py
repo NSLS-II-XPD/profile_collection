@@ -16,9 +16,9 @@ class Robot(Device):
     current_sample_number = Cpt(EpicsSignalRO, 'Addr:CurrSmpl-I')
  
     # Map sample types to their load position and measurement position.
-    TH_POS = {'capillary': {'load': 90, 'measure': 90},
-              'plate': {'load': 90, 'measure': 180}, 
-              None: {'load': 90, 'measure': 90}}
+    TH_POS = {'capillary': {'load': None, 'measure': None},
+              'plate': {'load': 0, 'measure': 90}, 
+              None: {'load': None, 'measure': None}}
 
     DIFF_POS = {'capilary': (1,2),}
 
@@ -38,18 +38,36 @@ class Robot(Device):
         while self.status.get() != 'Idle':
             time.sleep(.1)
 
+    def _poll_until_sample_cleared(self):
+        while self.current_sample_number.get() != 0:
+            time.sleep(.1)
+
     def load_sample(self, sample_number, sample_geometry=None):
+        # If no sample is loaded, current_sample_number=0
+        # is reported by the robot.
         if self.current_sample_number.get() != 0:
             raise RuntimeError("Sample %d is already loaded." % self.current_sample_number.get())
-        print('Moving theta to load position')
-        self.theta.move(self.TH_POS[sample_geometry]['load'], wait=True)
+ 
+        # Rotate theta into loading position if necessary (e.g. flat plate mode).
+        load_pos = self.TH_POS[sample_geometry]['load']
+        if load_pos is not None:
+            print('Moving theta to load position')
+            self.theta.move(load_pos, wait=True)
+
+        # Loading the sample is a three-step procedure:
+        # Set sample_number; issue load_cmd; issue execute_cmd.
         set_and_wait(self.sample_number, sample_number)
         set_and_wait(self.load_cmd, 1)
-        print('Executing load command')
         self.execute_cmd.put(1)
+        print('Loading...')
         self._poll_until_idle()
-        print('Moving theta to measure position')
-        self.theta.move(self.TH_POS[sample_geometry]['measure'], wait=True)
+
+        # Rotate theta into measurement position if necessary (e.g. flat plate mode).
+        measure_pos = self.TH_POS[sample_geometry]['measure']
+        if measure_pos is not None:
+            print('Moving theta to measure position')
+            self.theta.move(measure_pos, wait=True)
+
         # Stash the current sample geometry for reference when we unload.
         self._current_sample_geometry = sample_geometry
 
@@ -57,18 +75,24 @@ class Robot(Device):
         if self.current_sample_number.get() == 0:
             # there is nothing to do
             return
-        print('Moving theta to unload position')
-        self.theta.move(self.TH_POS[self._current_sample_geometry]['load'], wait=True)
-        print('Executing unload command')
+
+        # Rotate theta into loading position if necessary (e.g. flat plate mode).
+        load_pos = self.TH_POS[self._current_sample_geometry]['load']
+        if load_pos is not None:
+            print('Moving theta to unload position')
+            self.theta.move(load_pos, wait=True)
+
         set_and_wait(self.unload_cmd, 1)
         self.execute_cmd.put(1)
+        print('Unloading...')
         self._poll_until_idle()
+        self._poll_until_sample_cleared()
         self._current_sample_geometry = None
 
     def stop(self):
         self.theta.stop()
         super().stop()
-        
+
 
 from bluesky.plans import abs_set, pchain, open_run, close_run
 from bluesky import Msg
@@ -159,8 +183,38 @@ def Tramp(sample, exposure, start, stop, step):
 
 
 # Define list of sample info.
-samples = [{'position': 1, 'geometry': 'plate', 'sample_name': 'stuff'},
-           {'position': 2, 'geometry': 'capillary', 'sample_name': 'other_stuff'}]
+samples = [{'position': 1, 'geometry': 'capillary', 'sample_name': 'stuff'},
+           {'position': 2, 'geometry': 'plate', 'sample_name': 'other_stuff'}]
+
+def example():
+    for sample in samples:
+        # Define a normal plan, from bluesky or xpdacq.
+        plan = bp.count([], md={'sample_name': sample['sample_name']})
+        # Modify the plan by stacking robot instructions before and after.
+        # It also needs the sample, from which it extracts the numerical
+        # sample 'position' (required) # and 'geometry' (optional).
+        # Recognized geometries are None (default), 'capillary', and 'plate'.
+        yield from robot_wrapper(plan, sample)
+
+
+def excel_example(filename, geometry=None):
+    """
+    Example: RE(excel_example('/XF28IDC/XF28ID1/pe2_data/xpdUser/Import/example-with-dan.xlsx'))
+    """
+    import pandas as pd
+    f = pd.ExcelFile(filename)
+    sheet = f.parse()
+    for _, row in sheet.iloc[1:].iterrows():
+        name, phase, bg_name, position = row[:4]
+        position = int(position)
+        sample = {'sample_name': name,
+                  'phase_info': phase,
+                  'bg_name': bg_name,
+                  'position': position,
+                  'geometry': geometry}
+        plan = bp.count([], md=sample)
+        yield from robot_wrapper(plan, sample)
+
 
 # master_plan = pchain(plan(sample) for sample in samples)
 
