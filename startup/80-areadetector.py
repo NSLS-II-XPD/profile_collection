@@ -89,7 +89,7 @@ class SavedImageSignal(Signal):
 
 def take_dark(cam, light_field, dark_field_name):
     # close shutter
-    
+
     # take the dark frame
     cam.stage()
     st = cam.trigger()
@@ -105,8 +105,8 @@ def take_dark(cam, light_field, dark_field_name):
     df_sig.put(**df)
     # save the darkfrom description
     df_sig.stashed_datakey = desc[light_field]
-    
-    
+
+
 
 
 class XPDTIFFPlugin(TIFFPlugin, FileStoreTIFFSquashing,
@@ -125,12 +125,14 @@ class XPDPerkinElmer(PerkinElmerDetector):
              write_path_template='H:/pe1_data/%Y/%m/%d/',
              read_path_template='/direct/XF28ID1/pe1_data/%Y/%m/%d/',
              cam_name='cam',  # used to configure "tiff squashing"
+             root='/direct/XF28ID1/',
              proc_name='proc', read_attrs=[])  # ditto
 
     # hdf5 = C(XPDHDF5Plugin, 'HDF1:',
     #          write_path_template='G:/pe1_data/%Y/%m/%d/',
-    #          read_path_template='/home/xf28id1/pe1_data/%Y/%m/%d/')
-    
+    #          read_path_template='/direct/XF28ID1/pe1_data/%Y/%m/%d/',
+    #          root='/direct/XF28ID1/')
+
     proc = C(ProcessPlugin, 'Proc1:')
 
     # These attributes together replace `num_images`. They control
@@ -221,7 +223,7 @@ class ContinuousAcquisitionTrigger(BlueskyInterface):
             self._status._finished()
             self._status = None
             self._save_started = False
-            
+
 
 
 class PerkinElmerContinuous(ContinuousAcquisitionTrigger, XPDPerkinElmer):
