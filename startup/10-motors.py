@@ -28,4 +28,5 @@ class FilterBank(ophyd.Device):
     flt3 = ophyd.Component(EpicsSignal, '3-Cmd', string=True)
     flt4 = ophyd.Component(EpicsSignal, '4-Cmd', string=True)
 
-pd = EpicsSignal('XF:28IDC-BI:1{IM:02}Pos-Cmd', name='pd', string=True)
+fb = FilterBank('XF:28IDC-OP:1{Fltr}Cmd:Opn', name='fb')
+p_diode = EpicsSignal('XF:28IDC-BI:1{IM:02}Pos-Cmd', name='p_diode', string=True)
