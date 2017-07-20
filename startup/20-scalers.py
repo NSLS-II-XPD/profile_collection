@@ -2,7 +2,7 @@ from ophyd import EpicsScaler
 
 
 em = EpicsScaler('XF:28IDC-BI:1{IM:02}', name='em')
-em.channels.read_attrs = ['chan%d' % i for i in [20, 21, 22, 23]]
+em.channels.read_attrs = ['chan%d' % i for i in [22, 21, 20, 23]]
 # Default of em.channels.chan22 is 'em_channels_chan22'.
 # Change it to 'em_chan22' for brevity.
 for ch_name in em.channels.signal_names:
