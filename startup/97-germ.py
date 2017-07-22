@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.widgets import SpanSelector
+from matplotlib.colors import LogNorm
+from pygerm.reduction import *
 
 db.fs.register_handler('GeRM', GeRMHandler)
 
@@ -149,7 +151,8 @@ def plot_all_chan_spectrum(h, *, ax=None, **kwargs):
     ax_t.xaxis.set_label_position("top")
     
     im = ax.imshow(spectrum, origin='lower', aspect='auto', extent=(-.5, 383.5,
-                                                                    bins[0], bins[-1]))
+                                                                    bins[0], bins[-1]),
+                   norm=LogNorm())
 
     e_line, = ax_r.plot(spectrum.sum(axis=1), bins[:-1] + np.diff(bins))
     p_line, = ax_t.plot(spectrum.sum(axis=0))
@@ -213,16 +216,9 @@ def track_peaks(h, bin_num=3000):
         
     return np.array(lines), angles
 
-def bin_by_angle_and_energy(integrated_spectrum, base_angles, angle_bins):
-    out = np.zeros(len(angle_bins) - 1)
-    for line, base_angle in zip(integrated_spectrum, base_angles):
-        line = integrate_to_angles(spectrum, bin_edges, 50, 54))
-        line_angles = base_angle - (np.arange(384) - 192) * 0.017
-        
-        out += np.histogram(line_angles, weights=line)
-    return out
-
     
 
 _cal_file = Path(os.path.realpath(__file__)).parent / 'calibration_martix.txt'
 cal_val = np.loadtxt(str(_cal_file))
+
+    
