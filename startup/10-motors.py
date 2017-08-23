@@ -1,6 +1,8 @@
 "Define all the motors on the beamline"
 
 from ophyd import EpicsMotor
+import ophyd
+from ophyd import EpicsSignal
 
 th_cal = EpicsMotor('XF:28IDC-ES:1{Dif:2-Ax:Th}Mtr', name='th_cal')
 tth_cal = EpicsMotor('XF:28IDC-ES:1{Dif:2-Ax:2Th}Mtr', name='tth_cal')
@@ -26,3 +28,13 @@ hrm_r = EpicsMotor('XF:28IDC-OP:1{Mono:HRM-Ax:R}Mtr', name='hrm_r')
 
 
 shctl1 = EpicsMotor('XF:28IDC-ES:1{Sh2:Exp-Ax:5}Mtr', name='shctl1')
+
+
+class FilterBank(ophyd.Device):
+    flt1 = ophyd.Component(EpicsSignal, '1-Cmd', string=True)
+    flt2 = ophyd.Component(EpicsSignal, '2-Cmd', string=True)
+    flt3 = ophyd.Component(EpicsSignal, '3-Cmd', string=True)
+    flt4 = ophyd.Component(EpicsSignal, '4-Cmd', string=True)
+
+fb = FilterBank('XF:28IDC-OP:1{Fltr}Cmd:Opn', name='fb')
+p_diode = EpicsSignal('XF:28IDC-BI:1{IM:02}Pos-Cmd', name='p_diode', string=True)
