@@ -2,44 +2,43 @@
 from ophyd import setup_ophyd
 setup_ophyd()
 
+# Set up a RunEngine and use metadata backed by a sqlite file.
+from bluesky import RunEngine
+from bluesky.utils import get_history
+RE = RunEngine(get_history())
+
+# Set up a Broker.
+from databroker import Broker
+db = Broker.named('xpd')
+
 # Subscribe metadatastore to documents.
 # If this is removed, data is not saved to metadatastore.
-from bluesky.global_state import gs
+RE.subscribe(db.insert)
 
-from metadatastore.mds import MDS
-# from metadataclient.mds import MDS
-from databroker import Broker
-from databroker.core import register_builtin_handlers
-from filestore.fs import FileStore
+# Set up SupplementalData.
+from bluesky import SupplementalData
+sd = SupplementalData()
+RE.preprocessors.append(sd)
 
-# pull from /etc/metadatastore/connection.yaml
-_mds_config = {'host': 'xf28id-ca1.cs.nsls2.local',
-               'database': 'datastore',
-               'port': 27017,
-               'timezone': 'US/Eastern'}
-_fs_config = {'host': 'xf28id-ca1.cs.nsls2.local',
-               'database': 'filestore',
-               'port': 27017}
+# Add a progress bar.
+from bluesky.utils import ProgressBarManager
+pbar_manager = ProgressBarManager()
+RE.waiting_hook = pbar_manager
 
+# Register bluesky IPython magics.
+from bluesky.magics import BlueskyMagics
+get_ipython().register_magics(BlueskyMagics)
 
-mds = MDS(_mds_config, auth=False)
-# mds = MDS({'host': CA, 'port': 7770})
+# Set up the BestEffortCallback.
+from bluesky.callbacks.best_effort import BestEffortCallback
+bec = BestEffortCallback()
+RE.subscribe(bec)
+peaks = bec.peaks  # just as alias for less typing
 
-# pull configuration from /etc/filestore/connection.yaml
-db = Broker(mds, FileStore(_fs_config))
-register_builtin_handlers(db.fs)
-
-def ensure_proposal_id(md):
-    if 'sample_number' not in md:
-        raise ValueError("You forgot the proposal_id.")
-
-
-gs.RE.subscribe_lossless('all', mds.insert)
-
-
-# Verify files exist at the end of a run an print confirmation message.
+# At the end of every run, verify that files were saved and
+# print a confirmation message.
 from bluesky.callbacks.broker import verify_files_saved, post_run
-gs.RE.subscribe('stop', post_run(verify_files_saved))
+RE.subscribe(post_run(verify_files_saved, db), 'stop')
 
 # Import matplotlib and put it in interactive mode.
 import matplotlib.pyplot as plt
@@ -53,34 +52,33 @@ install_qt_kicker()
 # RE.md['beamline_id'] = 'YOUR_BEAMLINE_HERE'
 
 # convenience imports
-from ophyd.commands import *
-from bluesky.plans import (count, scan, relative_scan, inner_product_scan,
-                           outer_product_scan, adaptive_scan,
-                           relative_adaptive_scan)
 from bluesky.callbacks import *
-from bluesky.spec_api import *
-from bluesky.global_state import gs, abort, stop, resume
-from time import sleep
+from bluesky.callbacks.broker import *
+from bluesky.simulators import *
+from bluesky.plans import *
 import numpy as np
 
-RE = gs.RE  # convenience alias
+from pyOlog.ophyd_tools import *
 
-# RE.md_validator = ensure_proposal_id
-
-# Uncomment the following lines to turn on verbose messages for debugging.
+# Uncomment the following lines to turn on verbose messages for
+# debugging.
 # import logging
 # ophyd.logger.setLevel(logging.DEBUG)
 # logging.basicConfig(level=logging.DEBUG)
 
-gs.RE.md['owner'] = 'xf28id1'
-gs.RE.md['group'] = 'XPD'
-gs.RE.md['beamline_id'] = 'xpd'
+
+RE.md['owner'] = 'xf28id1'
+RE.md['group'] = 'XPD'
+RE.md['beamline_id'] = 'xpd'
 
 import subprocess
+
+
 def show_env():
+    # this is not guaranteed to work as you can start IPython without hacking
+    # the path via activate
     proc = subprocess.Popen(["conda", "list"], stdout=subprocess.PIPE)
     out, err = proc.communicate()
     a = out.decode('utf-8')
     b = a.split('\n')
     print(b[0].split('/')[-1][:-1])
-
