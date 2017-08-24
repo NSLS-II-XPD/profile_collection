@@ -128,12 +128,12 @@ class XPDPerkinElmer(PerkinElmerDetector):
              proc_name='proc',  # ditto
              read_attrs=[],
              root='/direct/XF28ID1/',
-             fs=db.fs)
+             reg=db.reg)
 
     # hdf5 = C(XPDHDF5Plugin, 'HDF1:',
     #          write_path_template='G:/pe1_data/%Y/%m/%d/',
     #          read_path_template='/direct/XF28ID1/pe1_data/%Y/%m/%d/',
-    #          root='/direct/XF28ID1/', fs=db.fs)
+    #          root='/direct/XF28ID1/', reg=db.reg)
 
     proc = C(ProcessPlugin, 'Proc1:')
 
