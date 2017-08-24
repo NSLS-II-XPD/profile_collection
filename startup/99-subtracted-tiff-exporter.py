@@ -9,8 +9,8 @@ class SubtractedTiffExporter(LiveTiffExporter):
         if 'dark_frame' not in doc:
             raise ValueError("No dark_frame was recorded.")
         uid = doc['dark_frame']
-        dark_header = db[uid]
-        self.dark_img, = get_images(db[uid], 'pe1_image')
+        h = db[uid]
+        self.dark_img, = h.get_data('pe1_image')
         super().start(doc)
 
     def event(self, doc):
