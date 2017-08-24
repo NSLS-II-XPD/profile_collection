@@ -4,8 +4,6 @@ from databroker import process
 from bluesky import Msg
 from bluesky.plans import DeltaScanPlan, DeltaListScanPlan
 
-RE = gs.RE  # an alias
-
 
 def take_dark():
     print('closing shutter...')
