@@ -1,34 +1,4 @@
-from time import sleep
 from bluesky.callbacks.broker import LiveTiffExporter
-from databroker import process
-from bluesky import Msg
-from bluesky.plans import DeltaScanPlan, DeltaListScanPlan
-
-
-def take_dark():
-    print('closing shutter...')
-    shctl1.put(0)  # close shutter
-    sleep(2)
-    print('taking dark frame....')
-    uid, = RE(Count([pe1c]))
-    print('opening shutter...')
-    shctl1.put(1)
-    sleep(2)
-    return uid
-
-
-def run(motor, x, start, stop, num_steps, loops, *, exposure=1,  **metadata):
-    print('moving %s to initial position' % motor.name)
-    subs = [LiveTable(['pe1_stats1_total', motor.name]),
-            LivePlot('pe1_stats1_total', motor.name)]
-    motor.move(x)
-    pe1c.images_per_set.put(exposure // 0.1)
-    dark_uid = take_dark()
-    steps = loops * list(np.linspace(start, stop, num=num_steps, endpoint=True))
-    plan = DeltaListScanPlan([pe1c], motor, steps)
-    uid = RE(plan, subs, dark_frame=dark_uid, **metadata)
-    sleep(3)
-    process(db[uid], exporter)
 
 
 class SubtractedTiffExporter(LiveTiffExporter):
