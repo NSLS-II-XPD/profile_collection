@@ -19,5 +19,9 @@ class SubtractedTiffExporter(LiveTiffExporter):
         doc['data'][self.field] = subtracted_img
         super().event(doc)
 
-template = "/home/xf28id1/xpdUser/tiff_base/LaB6_EPICS/{start.sa_name}_{start.scan_id}_step{event.seq_num}.tif"
+
+# TODO this looks too hard-coded!
+template = ("/home/xf28id1/xpdUser/tiff_base/LaB6_EPICS/"
+            "{start.sa_name}_{start.scan_id}_step{event.seq_num}.tif")
+
 exporter = SubtractedTiffExporter('pe1_image', template)
