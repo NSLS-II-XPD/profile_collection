@@ -38,7 +38,7 @@ peaks = bec.peaks  # just as alias for less typing
 # At the end of every run, verify that files were saved and
 # print a confirmation message.
 from bluesky.callbacks.broker import verify_files_saved, post_run
-RE.subscribe(post_run(verify_files_saved, db), 'stop')
+# RE.subscribe(post_run(verify_files_saved, db), 'stop')
 
 # Import matplotlib and put it in interactive mode.
 import matplotlib.pyplot as plt
@@ -67,9 +67,9 @@ from pyOlog.ophyd_tools import *
 # logging.basicConfig(level=logging.DEBUG)
 
 
-RE.md['owner'] = 'xf28id1'
+RE.md['facility'] = 'NSLS-II'
 RE.md['group'] = 'XPD'
-RE.md['beamline_id'] = 'xpd'
+RE.md['beamline_id'] = '28-ID-2'
 
 import subprocess
 
