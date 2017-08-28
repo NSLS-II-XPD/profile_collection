@@ -1,3 +1,4 @@
+### This is RGA:2 configured for ExQ new RGA connected at 10.28.2.142 #####
 from ophyd import Device, Component as Cpt
 
 
@@ -15,6 +16,7 @@ class RGA(Device):
     mass9 = Cpt(EpicsSignalRO, 'P:MID9-I')
 
 ## We don't want the RGA to start and stop by any bluseky plan###
+
 """
     def stage(self):
         self.startRGA.put(1)
@@ -31,6 +33,6 @@ class RGA(Device):
         return res
  """
 
-rga = RGA('XF:28IDA-VA{RGA:1}',
+rga = RGA('XF:28IDC-VA{RGA:2}',
           name='rga',
           read_attrs=['mass1', 'mass2', 'mass3', 'mass4','mass5', 'mass6', 'mass7', 'mass8', 'mass9'])
