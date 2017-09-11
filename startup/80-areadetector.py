@@ -120,7 +120,9 @@ class XPDHDF5Plugin(HDF5Plugin, FileStoreHDF5IterativeWrite):
 
 class XPDPerkinElmer(PerkinElmerDetector):
     image = C(ImagePlugin, 'image1:')
-
+    _default_configuration_attrs = (
+        PerkinElmerDetector._default_configuration_attrs +
+        ('images_per_set', 'number_of_sets'))
     tiff = C(XPDTIFFPlugin, 'TIFF1:',
              write_path_template='H:/pe1_data/%Y/%m/%d/',
              read_path_template='/direct/XF28ID1/pe1_data/%Y/%m/%d/',
@@ -240,21 +242,16 @@ class PerkinElmerMulti(MultiTrigger, XPDPerkinElmer):
     shutter = C(EpicsSignal, 'XF:28IDC-ES:1{Sh:Exp}Cmd-Cmd')
 
 
-pe1 = PerkinElmerStandard('XF:28IDC-ES:1{Det:PE1}', name='pe1', read_attrs=['tiff'],
-                          configuration_attrs=['images_per_set', 'number_of_sets'])
+pe1 = PerkinElmerStandard('XF:28IDC-ES:1{Det:PE1}', name='pe1', read_attrs=['tiff'])
+
 
 pe1m = PerkinElmerMulti('XF:28IDC-ES:1{Det:PE1}', name='pe1', read_attrs=['tiff'],
-                        configuration_attrs=['images_per_set', 'number_of_sets'],
                         trigger_cycle=[[('image', {shctl1: 1}),
                                         ('dark_image', {shctl1: 0})]])
 
 pe1c = PerkinElmerContinuous('XF:28IDC-ES:1{Det:PE1}', name='pe1',
-                             read_attrs=['tiff', 'stats1'],
-                             configuration_attrs=['images_per_set', 'number_of_sets'],
+                             read_attrs=['tiff', 'stats1.total'],
                              plugin_name='tiff')
-pe1.tiff.read_attrs = []  # don't include any signals, just the image itself
-pe1c.tiff.read_attrs = []  # just the image
-pe1c.stats1.read_attrs = ['total']
 
 # some defaults, as an example of how to use this
 # pe1.configure(dict(images_per_set=6, number_of_sets=10))
