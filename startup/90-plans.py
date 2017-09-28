@@ -47,12 +47,47 @@ def MED(init_gas, other_gas, minT, maxT, num_steps, num_steady, num_trans, num_l
     yield from abs_set(gas, init_gas)
     yield from subs_wrapper(count([pe1], num_steady), LiveTable([]))
 
-d_spacings = {'LaB6': np.array([4.15772, 2.94676, 2.40116]),
+D_SPACINGS = {'LaB6': np.array([4.15772, 2.94676, 2.40116]),
               'Si': 5.43095 / np.array([np.sqrt(3), np.sqrt(8), np.sqrt(11), np.sqrt(27)]),
              }
 
+import numpy as np
 
-def Ecal(guessed_energy, mode, *, guessed_amplitude=1, margin=0.5, min_step=0.001, D='LaB6', max_n=3, md=None):
+#def gaussian(theta, center, width):
+#    return 1500 / (np.sqrt(2*np.pi) * width) * np.exp(-((theta - center) / width)**2 / 2)
+
+def intensity(theta, amplitude, width, wavelength):
+    result = np.clip(5 * np.random.randn(), 0, None)  # Gaussian noise
+    for d in D_SPACINGS['LaB6']:
+        assert wavelength < 2 * d, \
+            "wavelength would result in illegal arg to arcsin"
+        try:
+            center = np.arcsin(wavelength / (2 * d))
+        except Exception:
+            print("DEAD"); center = 0
+        result += voigt(theta, amplitude, center, width)
+        result += voigt(-theta, amplitude, center, width)
+    return result
+
+from bluesky.examples import Reader, Mover
+
+
+def current_intensity():
+    amplitude = 0.5
+    width = 0.004  # degrees
+    wavelength = 12.398 / 66.4 # angtroms
+    two_theta = tth_cal.read()['tth_cal']['value']  # degrees
+    theta = np.deg2rad(two_theta / 2)  # radians
+    return intensity(theta, amplitude, np.deg2rad(width), wavelength)
+
+
+tth_cal = Mover('tth_cal', {'tth_cal': lambda tth_cal: tth_cal}, {'tth_cal': 0})
+sc = Reader('sc', {'sc_chan1': lambda: current_intensity()})
+
+
+def Ecal(guessed_energy, mode, *,
+         guessed_amplitude=0.5, guessed_sigma=0.004, min_step=0.001, D='LaB6',
+         max_n=3, margin=0.5, offset=0, md=None):
     """
     Energy calibration scan
 
@@ -63,15 +98,22 @@ def Ecal(guessed_energy, mode, *, guessed_amplitude=1, margin=0.5, min_step=0.00
         units of keV
     mode : {'peaks', 'dips'}
     guessed_amplitude : number, optional
-        detector units, defaults to 1000
+        detector units, defaults to 1500
+    guessed_sigma : number, optional
+        in units of degrees, defaults to 0.004
+    min_step : number, optional
+        step size in degrees, defaults to 0.001
+    D : string or array, optional
+        Either provide the spacings literally (as an array) or
+        give the name of a known spacing ('LaB6' or 'Si')
+    max_n : integer, optional
+        how many peaks (on one side of 0), default is 3
     margin : number, optional
         how far to scan in two theta beyond the 
         guessed left and right peaks, default 0.5
-    D : string or array
-        Either provide the spacings literally (as an array) or
-        give the name of a known spacing ('LaB6' or 'Si')
-    offset : number
+    offset : number, optional
         Difference between crystal angle and hardware-reported angle.
+        Default is 0.
 
     Example
     -------
@@ -88,14 +130,14 @@ def Ecal(guessed_energy, mode, *, guessed_amplitude=1, margin=0.5, min_step=0.00
         factor = 1
         offset = -35.26  # degrees
     if isinstance(D, str):
-        D = d_spacings[D]
+        D = D_SPACINGS[D]
     # Based on the guessed energy, compute where the peaks should be centered
     # in theta. This will be used as an initial guess for peak-fitting.
     guessed_wavelength = 12.398 / guessed_energy  # angtroms
 
     theta = np.rad2deg(np.arcsin(guessed_wavelength / (2 * D)))
     guessed_centers = factor * theta  # 'factor' puts us in two-theta units if applicable
-    _range = (max(guessed_centers) + offset) + factor * margin
+    _range = (max(guessed_centers) + offset) + (factor * margin)
     start, stop = -_range, +_range
     print('guessed_wavelength={} [Angstroms]'.format(guessed_wavelength))
     print('guessed_centers={} [in {}-theta DEGREES]'.format(guessed_centers, factor))
@@ -105,8 +147,12 @@ def Ecal(guessed_energy, mode, *, guessed_amplitude=1, margin=0.5, min_step=0.00
         raise NotImplementedError("I only work for n up to 3.")
 
     def peaks(x, c0, wavelength, a1, a2, a3, sigma):
+        # x comes from hardware in two-theta degrees
+        x = np.deg2rad(x / 2)  # radians
         c0 = c0 + offset
-        c1, c2, c3 = np.rad2deg(2 * np.arcsin(wavelength / (2 * D)))
+        assert np.all(wavelength < 2 * D), \
+            "wavelength would result in illegal arg to arcsin"
+        c1, c2, c3 = np.arcsin(wavelength / (2 * D))
         result = (voigt(x=x, amplitude=a1, center=c0 - c1, sigma=sigma) +
                   voigt(x=x, amplitude=a1, center=c0 + c1, sigma=sigma))
         if max_n > 1:
@@ -117,21 +163,28 @@ def Ecal(guessed_energy, mode, *, guessed_amplitude=1, margin=0.5, min_step=0.00
                        voigt(x=x, amplitude=a3, center=c0 + c3, sigma=sigma))
         return result
                   
-    model = Model(peaks, missing='drop') + LinearModel(missing='drop')
+    model = Model(peaks) + LinearModel()
 
-    init_guess = {'intercept': 0,
-                  'slope': 0,
-                  'sigma': Parameter('sigma', value=10 * min_step, min=0, max=100 * min_step),
-                  'c0': 0,
-                  'wavelength': Parameter('wavelength', guessed_wavelength, min=0, max=np.min(D))}
+    # Fill out initial guess.
+    init_guess = {'intercept': Parameter('intercept', value=0, min=-10, max=10, vary=False),
+                  'slope': Parameter('slope', value=0, min=-10, max=10, vary=False),
+                  'sigma': Parameter('sigma', value=np.deg2rad(guessed_sigma)),
+                  'c0': Parameter('c0', value=np.deg2rad(0), vary=False),
+                  'wavelength': Parameter('wavelength', guessed_wavelength,
+                                          min=0.8 * guessed_wavelength,
+                                          max=1.2 * guessed_wavelength)}
+                                          # min=0, max=np.min(2 * D))}
     for i, center in enumerate(guessed_centers):
         if mode == 'peaks':
-            kwargs = {'min': 0}
+            kwargs = {'min': 0.5 * guessed_amplitude,
+                      'max': 2 * guessed_amplitude}
         elif mode == 'dips':
             kwargs = {'max': 0}
         else:
             raise ValueError("mode should be 'peaks' or 'dips'") 
-        init_guess.update({'a%d' % (1 + i): Parameter('a%d' % (1 + i), guessed_amplitude, **kwargs)})
+        init_guess.update(
+            {'a%d' % (1 + i): Parameter('a%d' % (1 + i), guessed_amplitude, **kwargs)})
+    print(init_guess)
     lf = LiveFit(model, 'sc_chan1', {'x': motor.name}, init_guess,
                  update_every=100)
 
@@ -156,7 +209,7 @@ def Ecal(guessed_energy, mode, *, guessed_amplitude=1, margin=0.5, min_step=0.00
         _md['hints'].setdefault('dimensions', dimensions)
 
     initial_steps = np.arange(start, stop, min_step)
-    assert initial_steps, "bad start, stop, min_step parameters"
+    assert len(initial_steps), "bad start, stop, min_step parameters"
 
     @stage_decorator(list(detectors) + [motor])
     @run_decorator(md=_md)
@@ -170,6 +223,7 @@ def Ecal(guessed_energy, mode, *, guessed_amplitude=1, margin=0.5, min_step=0.00
                 c1, c2, c3 = np.rad2deg(2 * np.arcsin(wavelength / (2 * D)))
                 if np.max(x_data > -(c1 + 3 * lf.result.values['sigma'])):
                     # Stop dense scanning.
+                    print('Preliminary result:\n', lf.result.values)
                     print('Becoming adaptive to save time....')
                     break
         sigma = 10 * lf.result.values['sigma']
