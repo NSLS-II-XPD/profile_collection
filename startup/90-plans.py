@@ -226,8 +226,8 @@ def Ecal(guessed_energy, mode, *,
                     print('Preliminary result:\n', lf.result.values)
                     print('Becoming adaptive to save time....')
                     break
-        sigma = 10 * lf.result.values['sigma']
-        neighborhoods = [np.arange(c - sigma, c + sigma, min_step) for c in (c1, c2, c3)]
+        size = factor * 0.05  # region around each predicted peak location
+        neighborhoods = [np.arange(c - size, c + size, min_step) for c in (c1, c2, c3)]
         for neighborhood in neighborhoods:
             for step in neighborhood:
                 yield from one_1d_step(detectors, motor, step)
