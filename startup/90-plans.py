@@ -88,10 +88,11 @@ def current_intensity_dips():
     theta = np.deg2rad(hw_theta + 35.26)  # radians
     return -intensity(theta, amplitude, np.deg2rad(width), wavelength)
 
+# SIMULATED HARDWARE FOR TESTING ONLY
 tth_cal = Mover('tth_cal', {'tth_cal': lambda tth_cal: tth_cal}, {'tth_cal': 0})
 th_cal = Mover('th_cal', {'th_cal': lambda th_cal: th_cal}, {'th_cal': 0})
-# sc = Reader('sc', {'sc_chan1': lambda: current_intensity_peaks()})
-sc = Reader('sc', {'sc_chan1': lambda: current_intensity_dips()})
+sc = Reader('sc', {'sc_chan1': lambda: current_intensity_peaks()})
+# sc = Reader('sc', {'sc_chan1': lambda: current_intensity_dips()})
 
 
 def Ecal(guessed_energy, mode, *,
@@ -147,7 +148,9 @@ def Ecal(guessed_energy, mode, *,
     theta = np.rad2deg(np.arcsin(guessed_wavelength / (2 * D)))
     guessed_centers = factor * theta  # 'factor' puts us in two-theta units if applicable
     _range = max(guessed_centers) + (factor * margin)
-    start, stop = -_range + offset, _range + offset
+    # Scan from positive to negative because that is the direction
+    # that the th_cal and tth_cal motors move without backlash.
+    start, stop = _range + offset, -_range + offset
     print('guessed_wavelength={} [Angstroms]'.format(guessed_wavelength))
     print('guessed_centers={} [in {}-theta DEGREES]'.format(guessed_centers, factor))
     print('will scan from {} to {} in hardware units'.format(start, stop))
@@ -211,7 +214,7 @@ def Ecal(guessed_energy, mode, *,
     else:
         _md['hints'].setdefault('dimensions', dimensions)
 
-    initial_steps = np.arange(start, stop, min_step)
+    initial_steps = np.arange(start, stop, -min_step)
     assert len(initial_steps), "bad start, stop, min_step parameters"
     size = factor * 0.05  # region around each predicted peak location
 
@@ -226,12 +229,14 @@ def Ecal(guessed_energy, mode, *,
                 wavelength = lf.result.values['wavelength']
                 # Convert c's to hardware units here for comparison with x_data.
                 c1, c2, c3 = factor * np.rad2deg(np.arcsin(wavelength / (2 * D))) + offset
-                if np.max(x_data > (-c1 + size)):
+                if np.min(x_data) < (c1 - 1):
                     # Stop dense scanning.
                     print('Preliminary result:\n', lf.result.values)
                     print('Becoming adaptive to save time....')
                     break
-        neighborhoods = [np.arange(c - size, c + size, min_step) for c in (c1, c2, c3)]
+        # left of zero peaks
+        c1, c2, c3 = -factor * np.rad2deg(np.arcsin(wavelength / (2 * D))) + offset
+        neighborhoods = [np.arange(c + size, c - size, -min_step) for c in (c1, c2, c3)]
         for neighborhood in neighborhoods:
             for step in neighborhood:
                 yield from one_1d_step(detectors, motor, step)
