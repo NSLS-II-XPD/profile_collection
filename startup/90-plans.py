@@ -147,8 +147,8 @@ def Ecal(guessed_energy, mode, *,
         raise NotImplementedError("I only work for n up to 3.")
 
     def peaks(x, c0, wavelength, a1, a2, a3, sigma):
-        # x comes from hardware in two-theta degrees
-        x = np.deg2rad(x / 2)  # radians
+        # x comes from hardware in [theta or two-theta] degrees
+        x = np.deg2rad(x / factor)  # radians
         c0 = c0 + offset
         assert np.all(wavelength < 2 * D), \
             "wavelength would result in illegal arg to arcsin"
@@ -220,7 +220,7 @@ def Ecal(guessed_energy, mode, *,
             if x_data and lf.result is not None:
                 # Have we yet scanned past the third peak?
                 wavelength = lf.result.values['wavelength']
-                c1, c2, c3 = np.rad2deg(2 * np.arcsin(wavelength / (2 * D)))
+                c1, c2, c3 = factor * np.rad2deg(np.arcsin(wavelength / (2 * D)))
                 if np.max(x_data > -(c1 + 3 * lf.result.values['sigma'])):
                     # Stop dense scanning.
                     print('Preliminary result:\n', lf.result.values)
@@ -237,7 +237,6 @@ def Ecal(guessed_energy, mode, *,
     plan = reset_positions_wrapper(plan, [motor])
     ret = (yield from plan)
     print(lf.result.values)
-    print(lf.result)
     print('WAVELENGTH: {} [Angstroms]'.format(lf.result.values['wavelength']))
     return ret
 
