@@ -135,6 +135,7 @@ def Ecal(guessed_energy, mode, *,
     if mode == 'dips':
         motor = th_cal
         factor = 1
+        # theta_hardware = theta_theorhetical + offset
         offset = -35.26  # degrees
         sign = -1
     if isinstance(D, str):
