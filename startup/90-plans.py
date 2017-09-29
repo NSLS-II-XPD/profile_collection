@@ -85,13 +85,13 @@ def current_intensity_dips():
     width = 0.004  # degrees
     wavelength = 12.398 / 66.4 # angtroms
     hw_theta = th_cal.read()['th_cal']['value']  # degrees
-    theta = np.deg2rad(hw_theta - 35.26)  # radians
+    theta = np.deg2rad(hw_theta + 35.26)  # radians
     return -intensity(theta, amplitude, np.deg2rad(width), wavelength)
 
 tth_cal = Mover('tth_cal', {'tth_cal': lambda tth_cal: tth_cal}, {'tth_cal': 0})
 th_cal = Mover('th_cal', {'th_cal': lambda th_cal: th_cal}, {'th_cal': 0})
-sc = Reader('sc', {'sc_chan1': lambda: current_intensity_peaks()})
-# sc = Reader('sc', {'sc_chan1': lambda: current_intensity_dips()})
+# sc = Reader('sc', {'sc_chan1': lambda: current_intensity_peaks()})
+sc = Reader('sc', {'sc_chan1': lambda: current_intensity_dips()})
 
 
 def Ecal(guessed_energy, mode, *,
@@ -131,10 +131,12 @@ def Ecal(guessed_energy, mode, *,
         motor = tth_cal
         factor = 2
         offset = 0
+        sign = 1
     if mode == 'dips':
         motor = th_cal
         factor = 1
         offset = -35.26  # degrees
+        sign = -1
     if isinstance(D, str):
         D = D_SPACINGS[D]
     # Based on the guessed energy, compute where the peaks should be centered
@@ -158,14 +160,14 @@ def Ecal(guessed_energy, mode, *,
         assert np.all(wavelength < 2 * D), \
             "wavelength would result in illegal arg to arcsin"
         c1, c2, c3 = np.arcsin(wavelength / (2 * D))
-        result = (voigt(x=x, amplitude=a1, center=c0 - c1, sigma=sigma) +
-                  voigt(x=x, amplitude=a1, center=c0 + c1, sigma=sigma))
+        result = (voigt(x=x, amplitude=sign*a1, center=c0 - c1, sigma=sigma) +
+                  voigt(x=x, amplitude=sign*a1, center=c0 + c1, sigma=sigma))
         if max_n > 1:
-            result += (voigt(x=x, amplitude=a2, center=c0 - c2, sigma=sigma) +
-                       voigt(x=x, amplitude=a2, center=c0 + c2, sigma=sigma))
+            result += (voigt(x=x, amplitude=sign*a2, center=c0 - c2, sigma=sigma) +
+                       voigt(x=x, amplitude=sign*a2, center=c0 + c2, sigma=sigma))
         if max_n > 2:
-            result += (voigt(x=x, amplitude=a3, center=c0 - c3, sigma=sigma) +
-                       voigt(x=x, amplitude=a3, center=c0 + c3, sigma=sigma))
+            result += (voigt(x=x, amplitude=sign*a3, center=c0 - c3, sigma=sigma) +
+                       voigt(x=x, amplitude=sign*a3, center=c0 + c3, sigma=sigma))
         return result
                   
     model = Model(peaks) + LinearModel()
@@ -179,14 +181,9 @@ def Ecal(guessed_energy, mode, *,
                                           min=0.8 * guessed_wavelength,
                                           max=1.2 * guessed_wavelength)}
                                           # min=0, max=np.min(2 * D))}
+    kwargs = {'min': 0.5 * guessed_amplitude,
+              'max': 2 * guessed_amplitude}
     for i, center in enumerate(guessed_centers):
-        if mode == 'peaks':
-            kwargs = {'min': 0.5 * guessed_amplitude,
-                      'max': 2 * guessed_amplitude}
-        elif mode == 'dips':
-            kwargs = {'max': 0}
-        else:
-            raise ValueError("mode should be 'peaks' or 'dips'") 
         init_guess.update(
             {'a%d' % (1 + i): Parameter('a%d' % (1 + i), guessed_amplitude, **kwargs)})
     print(init_guess)
