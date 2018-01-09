@@ -3,8 +3,12 @@ from ophyd import Device, EpicsSignal, EpicsSignalRO
 from ophyd import Component as C
 from ophyd.utils import set_and_wait
 from bluesky import Msg
-from bluesky.plans import subs_wrapper, count, list_scan, single_gen
+from bluesky.plans import count, list_scan
+from bluesky.plan_stubs import abs_set, open_run, close_run
+from bluesky.utils import single_gen
+from bluesky.preprocessors import subs_wrapper, pchain
 from bluesky.callbacks import LiveTable
+from bluesky import Msg
 
 
 class Robot(Device):
@@ -94,8 +98,6 @@ class Robot(Device):
         super().stop()
 
 
-from bluesky.plans import abs_set, pchain, open_run, close_run
-from bluesky import Msg
 
 
 # Define custom commands for sample loading/unloading.
@@ -218,6 +220,6 @@ def excel_example(filename, geometry=None):
 
 # master_plan = pchain(plan(sample) for sample in samples)
 
-robot = Robot('XF:28IDC-ES:1{SM}', theta=th)
+robot = Robot('XF:28IDC-ES:1{SM}', name='robot', theta=th)
 
 # old RobotPositioner code is .ipython/profile_2015_collection/startup/robot.py

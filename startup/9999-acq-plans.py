@@ -5,8 +5,9 @@ from xpdacq.beamtime import _configure_area_det
 import os
 import numpy as np
 import itertools
-from bluesky.plans import (scan, subs_wrapper, abs_set, count, list_scan,
-                           adaptive_scan, reset_positions_wrapper)
+from bluesky.plans import (scan, count, list_scan, adaptive_scan)
+from bluesky.preprocessors import subs_wrapper, reset_positions_wrapper
+from bluesky.plan_stubs import abs_set
 from bluesky.callbacks import LiveTable, LivePlot
 from bluesky.plan_tools import print_summary
 

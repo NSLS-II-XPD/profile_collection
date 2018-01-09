@@ -11,7 +11,6 @@ nslsii.configure_base(get_ipython().user_ns, 'xpd', pbar=True, bec=True,
 # Optional: set any metadata that rarely changes.
 # RE.md['beamline_id'] = 'YOUR_BEAMLINE_HERE'
 
-nslsii.configure_olog(get_ipython().user_ns)
 
 # At the end of every run, verify that files were saved and
 # print a confirmation message.
