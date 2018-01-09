@@ -23,7 +23,7 @@ class RGA(Device):
 
     def unstage(self):
         self.stopRGA.put(1)
-                     
+
 
     def describe(self):
         res = super().describe()

@@ -1,9 +1,12 @@
 import os
 import numpy as np
-from bluesky.plans import (scan, subs_wrapper, abs_set, pchain, count, list_scan,
-                           adaptive_scan, reset_positions_wrapper)
+from bluesky.plan_stubs import (abs_set, )
+from bluesky.plans import (scan, count, list_scan, adaptive_scan)
+from bluesky.preprocessors import (subs_wrapper, pchain,
+                                   reset_positions_wrapper)
 from bluesky.callbacks import LiveTable, LivePlot, LiveFit, LiveFitPlot
 from bluesky.plan_tools import print_summary
+
 from lmfit import Model, Parameter
 from lmfit.models import VoigtModel, LinearModel
 from lmfit.lineshapes import voigt
@@ -57,7 +60,7 @@ def Ecal(guessed_energy, guessed_amplitude=1000, margin=0.5):
     guessed_amplitude : number, optional
         detector units, defaults to 1000
     margin : number, optional
-        how far to scan in two theta beyond the 
+        how far to scan in two theta beyond the
         guessed left and right peaks, default 0.5
 
     Example
@@ -86,7 +89,7 @@ def Ecal(guessed_energy, guessed_amplitude=1000, margin=0.5):
                   voigt(x=x, amplitude=a3, center=c0 - c3, sigma=sigma) +
                   voigt(x=x, amplitude=a3, center=c0 + c3, sigma=sigma))
         return result
-                  
+
     model = Model(peaks) + LinearModel()
 
     init_guess = {'intercept': 200, 'slope': 0, 'sigma': 0.1, 'c0': 0,

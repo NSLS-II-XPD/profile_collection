@@ -11,7 +11,7 @@ class CS700TemperatureController(PVPositioner):
     setpoint = C(EpicsSignal, 'T-SP')
     done = C(EpicsSignalRO, 'Cmd-Busy')
     stop_signal = C(EpicsSignal, 'Cmd-Cmd')
-    
+
     def set(self, *args, timeout=None, **kwargs):
         return super().set(*args, timeout=timeout, **kwargs)
 
@@ -51,7 +51,7 @@ class CryoStat(Device):
                    add_prefix=('suffix', 'read_pv', 'write_pv'))
     # heater power level
     heater = Cpt(EpicsSignal, ':HTR1')
-    
+
     # configuration
     dead_band = Cpt(AttributeSignal, attr='_dead_band')
     heater_range = Cpt(EpicsSignal, ':HTR1:Range', string=True)
@@ -60,11 +60,11 @@ class CryoStat(Device):
     cntrl = Cpt(EpicsSignal, ':OUT1:Cntrl', string=True)
     # trigger signal
     trig = Cpt(EpicsSignal, ':read.PROC')
-        
+
     def trigger(self):
         self.trig.put(1, wait=True)
         return DeviceStatus(self, done=True, success=True)
-        
+
     def __init__(self, *args, dead_band, read_attrs=None,
                  configuration_attrs=None, **kwargs):
         if read_attrs is None:
@@ -78,7 +78,7 @@ class CryoStat(Device):
         self._target = None
         self._dead_band = dead_band
         self._sts = None
-        
+
     def _sts_mon(self, value, **kwargs):
         if (self._target is None or
                  np.abs(self._target - value) < self._dead_band):
@@ -88,14 +88,14 @@ class CryoStat(Device):
                 self._sts._finished()
                 self._sts = None
             self._target = None
-            
+
     def set(self, val):
         self._target = val
         self.setpoint.put(val, wait=True)
         sts = self._sts = DeviceStatus(self)
         self.scan.put('.2 second')
         self.T.subscribe(self._sts_mon)
-        
+
         return sts
 
     def stop(self, *, success=False):

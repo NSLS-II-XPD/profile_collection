@@ -105,7 +105,7 @@ class ComputeWavelength(CollectThenCompute):
     """
     Example
     -------
-    >>> cw = ComputeWavelgnth('tth_cal', 'some_detector', d_spacings, ns) 
+    >>> cw = ComputeWavelgnth('tth_cal', 'some_detector', d_spacings, ns)
     >>> RE(scan(...), cw)
     """
     CONVERSION_FACTOR = 12.3984  # keV-Angstroms
@@ -142,7 +142,7 @@ class ComputeWavelength(CollectThenCompute):
         self.wavelength, self.wavelength_std, self.offset = get_wavelength_from_std_tth(x, y, self.d_spacings, self.ns)
         print('wavelength', self.wavelength, '+-', self.wavelength_std)
         print('energy', self.energy)
-    
+
 """
 if __name__ == '__main__':
     import os
@@ -150,7 +150,7 @@ if __name__ == '__main__':
     # step 0 load data
     calibration_file = os.path.join('../../data/LaB6_d.txt')
     d_spacings = np.loadtxt(calibration_file)
-    
+
     for data_file in ['../../data/Lab6_67p8.chi', '../../data/Lab6_67p6.chi']:
         a = np.loadtxt(data_file)
         wavechange = []
@@ -165,7 +165,7 @@ if __name__ == '__main__':
             print('added offset {}'.format(dx))
             off_x = x[:] + dx
             rv1, rv2, rv3 = get_wavelength_from_std_tth(off_x, y, d_spacings,
-                    np.ones(d_spacings.shape), 
+                    np.ones(d_spacings.shape),
 #plot=True
                     )
             print(rv1, rv2, rv3)

@@ -14,10 +14,10 @@ class Robot(Device):
     execute_cmd = Cpt(EpicsSignal, 'Cmd:Exec-Cmd')
     status = Cpt(EpicsSignal, 'Sts-Sts')
     current_sample_number = Cpt(EpicsSignalRO, 'Addr:CurrSmpl-I')
- 
+
     # Map sample types to their load position and measurement position.
     TH_POS = {'capillary': {'load': None, 'measure': None},
-              'plate': {'load': 0, 'measure': 90}, 
+              'plate': {'load': 0, 'measure': 90},
               None: {'load': None, 'measure': None}}
 
     DIFF_POS = {'capilary': (1,2),}
@@ -47,7 +47,7 @@ class Robot(Device):
         # is reported by the robot.
         if self.current_sample_number.get() != 0:
             raise RuntimeError("Sample %d is already loaded." % self.current_sample_number.get())
- 
+
         # Rotate theta into loading position if necessary (e.g. flat plate mode).
         load_pos = self.TH_POS[sample_geometry]['load']
         if load_pos is not None:
