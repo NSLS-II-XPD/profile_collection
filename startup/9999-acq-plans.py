@@ -20,7 +20,7 @@ def Gas_Plan(gas_in = 'He', liveplot_key=None, totExpTime = 5, num_exp = 1, dela
     """
     Execute it
     ----------
-    >> %run -i /home/xf28id1/Documents/Sanjit/Scripts/GasXrun_Plan.py
+    >> %run -i /home/xf28id2/Documents/Sanjit/Scripts/GasXrun_Plan.py
     >> change all the parameters inside Gas_Plan as required
     >>> gas_plan = Gas_Plan(gas_in = 'He', liveplot_key= 'rga_mass1', totExpTime = 5, num_exp = 3, delay = 1)
     >> to run the xrun, save metadata & save_tiff run the following
@@ -67,7 +67,7 @@ def Gas_Plan(gas_in = 'He', liveplot_key=None, totExpTime = 5, num_exp = 1, dela
     yield from plan
 
 def run_and_save(sample_num = 0):
-    data_dir = "/direct/XF28ID1/pe2_data/xpdUser/tiff_base/"
+    data_dir = "/direct/XF28ID2/pe2_data/xpdUser/tiff_base/"
     file_name = data_dir + "sample_num_" + str(sample_num) + ".csv"
     xrun(sample_num, gas_plan)
     h = db[-1]

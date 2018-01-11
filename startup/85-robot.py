@@ -201,7 +201,7 @@ def example():
 
 def excel_example(filename, geometry=None):
     """
-    Example: RE(excel_example('/XF28IDC/XF28ID1/pe2_data/xpdUser/Import/example-with-dan.xlsx'))
+    Example: RE(excel_example('/XF28IDC/XF28ID2/pe2_data/xpdUser/Import/example-with-dan.xlsx'))
     """
     import pandas as pd
     f = pd.ExcelFile(filename)
