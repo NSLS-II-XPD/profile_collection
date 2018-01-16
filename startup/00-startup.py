@@ -7,6 +7,9 @@ import nslsii
 nslsii.configure_base(get_ipython().user_ns, 'xpd', pbar=True, bec=True,
                       magics=True, mpl=True, epics_context=True)
 
+# IMPORTANT : This is needed to read old data
+db.reg.set_root_map({'/direct/XF28ID1':'/direct/XF28ID2'})
+
 
 # Optional: set any metadata that rarely changes.
 # RE.md['beamline_id'] = 'YOUR_BEAMLINE_HERE'
