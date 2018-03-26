@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 import os
 import numpy as np
 #from bluesky.plans import (scan, subs_wrapper, bps.abs_set, pchain, count, list_scan,
@@ -73,7 +75,6 @@ def intensity(theta, amplitude, width, wavelength):
     return result
 
 #from bluesky.examples import Reader, Mover
-from ophyd.sim import Reader, Mover
 
 
 def current_intensity_peaks():
@@ -100,9 +101,7 @@ def current_intensity_dips():
 
 
 
-
-
-def Ecal(guessed_energy, mode, *,
+def Ecal(detectors, motor, guessed_energy, mode, *,
          guessed_amplitude=0.5, guessed_sigma=0.004, min_step=0.001, D='LaB6',
          max_n=3, margin=0.5, md=None):
     """
@@ -111,6 +110,8 @@ def Ecal(guessed_energy, mode, *,
 
     Parameters
     ----------
+    detectors : detectors
+    motor : the motor
     guessed_energy : number
         units of keV
     mode : {'peaks', 'dips'}
@@ -136,12 +137,12 @@ def Ecal(guessed_energy, mode, *,
     >>> RE(Ecal(68))
     """
     if mode == 'peaks':
-        motor = tth_cal
+        #motor = tth_cal
         factor = 2
         offset = 0
         sign = 1
     if mode == 'dips':
-        motor = th_cal
+        #motor = th_cal
         factor = 1
         # theta_hardware = theta_theorhetical + offset
         offset = -35.26  # degrees
@@ -206,7 +207,7 @@ def Ecal(guessed_energy, mode, *,
     lfp = LiveFitPlot(lf, ax=ax, color='r')
     subs = [lfp, plot]
     
-    detectors = [sc]
+    #detectors = [det]#[sc]
     
     # Set up metadata -- based on the sourcecode of bluesky.plans.scan.
     _md = {'detectors': [det.name for det in detectors],
