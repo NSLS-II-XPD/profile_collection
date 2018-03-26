@@ -25,7 +25,9 @@ hrm_y = EpicsMotor('XF:28IDC-OP:1{Mono:HRM-Ax:Y}Mtr', name='hrm_y')
 hrm_b = EpicsMotor('XF:28IDC-OP:1{Mono:HRM-Ax:P}Mtr', name='hrm_b')
 hrm_r = EpicsMotor('XF:28IDC-OP:1{Mono:HRM-Ax:R}Mtr', name='hrm_r')
 
-
+# PE detector motions
+pe1_x = EpicsMotor('XF:28IDC-ES:1{Det:PE1-Ax:X}Mtr', name='pe1_x')
+pe1_z = EpicsMotor('XF:28IDC-ES:1{Det:PE1-Ax:Z}Mtr', name='pe1_z')
 
 shctl1 = EpicsMotor('XF:28IDC-ES:1{Sh2:Exp-Ax:5}Mtr', name='shctl1')
 
