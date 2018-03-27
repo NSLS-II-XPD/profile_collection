@@ -2,7 +2,7 @@
 
 # test xpd sim of motor movement
 import numpy as np
-from ophyd.sim import SynSignal, motor1
+from ophyd.sim import SynSignal, motor1, motor2
 
 class SynGaussPeaks(SynSignal):
     """
@@ -58,11 +58,6 @@ class SynGaussPeaks(SynSignal):
         super().__init__(func=func, name=name, **kwargs)
 
 
-# simulated sc detector
-sc = SynGaussPeaks("det_6peaks", motor1, motor_field='motor1',
-                             centers=[-5, -3,-1, 1, 3, 5], Imax=100, sigma=.2)
-# simulated two theta detector
-tth = motor1
 
 ''' test sim motors
 import bluesky.plan_stubs as bps
