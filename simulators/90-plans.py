@@ -199,11 +199,11 @@ def Ecal(detectors, motor, guessed_energy, mode, *,
         init_guess.update(
             {'a%d' % (1 + i): Parameter('a%d' % (1 + i), guessed_amplitude, **kwargs)})
     print(init_guess)
-    lf = LiveFit(model, 'sc_chan1', {'x': motor.name}, init_guess,
+    lf = LiveFit(model, detectors[0].name, {'x': motor.name}, init_guess,
                  update_every=100)
 
     fig, ax = plt.subplots()  # explitly create figure, axes to use below
-    plot = LivePlot('sc_chan1', motor.name, linestyle='none', marker='o', ax=ax)
+    plot = LivePlot(detectors[0].name, motor.name, linestyle='none', marker='o', ax=ax)
     lfp = LiveFitPlot(lf, ax=ax, color='r')
     subs = [lfp, plot]
     
@@ -229,6 +229,7 @@ def Ecal(detectors, motor, guessed_energy, mode, *,
     @bpp.stage_decorator(list(detectors) + [motor])
     @bpp.run_decorator(md=_md)
     def inner_scan():
+        wavelength=guessed_wavelength
         for step in initial_steps:
             yield from bps.one_1d_step(detectors, motor, step)
             x_data = lf.independent_vars_data['x']
