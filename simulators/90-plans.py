@@ -5,8 +5,8 @@ install_qt_kicker()
 
 import os
 import numpy as np
-#from bluesky.plans import (scan, subs_wrapper, bps.abs_set, pchain, count, list_scan,
-                           #adaptive_scan, reset_positions_wrapper)
+
+
 import bluesky.plan_stubs as bps
 import bluesky.plans as bp
 import bluesky.preprocessors as bpp
@@ -274,13 +274,14 @@ def RockingEcal(guess_energy, offset=35.26, D='Si'):
 
 
 # simulated sc detector
-#tth = SynSignal('tth', func = intensity_peaks)
-#th = SynSignal('th', func = intensity_dips)
+#tth_cal = SynSignal('tth', func = intensity_peaks)
+th_cal = motor1
 # simulated two theta detector
 # for intensity_peaks/dips simulation
 # for intensity_peaks/dips simulation
 #sc_peaks = SynSignal(name="det", func=current_intensity_peaks)
-#sc_dips = SynSignal(name="det", func=current_intensity_dips)
+# sc is dips
+sc = SynSignal(name="det", func=current_intensity_dips)
 
 from bluesky.plans import adaptive_scan
 
@@ -352,30 +353,37 @@ def Ecal_dips(detectors, motor, start, stop, min_step, max_step, target_delta,
 '''
 
 #Ecal2_dips([-36.91, -33.5], 66., max_step=.04, Npoints=20, D="Si", fignum=2):
-def Ecal2_dips(wguess, max_step, D='Si'):
+def Ecal2_dips(detectors, motor, wguess, max_step, D='Si', detector_name='sc_chan1',
+               theta_offset=-35.26, guessed_sigma=.002, nsigmas=10):
     '''
-        theta_guesses : the list of guess thetas ordered from low to high
+        This is the new Ecal scan for dips.
+            We should treat peaks separately to simplify matters (leaves for
+            easier tweaking)
+
+
+        This algorithm will search for a peak within a certain theta range
+            The theta range is determined from the wavelength guess
+
+        Parameters
+        ----------
+        detectors : list
+            list of detectors
+        motor : motor
+            the motor to scan on (th_cal)
         wguess : the guessed wavelength
-        
+        max_step : the max_step to scan on. This is the step size we use for
+            the coarse initial scan
+        D : string
+            the reference sample to use for the calculation of the d spacings
+        detector_name : str, optional
+            the name of the detector
+        theta_offset : the offset of theta zero estimated from the sample
+        guessed_sigma : the guessed sigma of the sample
+        nsigmas: int
+            the number of sigmas to scan for the fine scan
 
     '''
     global myresult
-
-    # TODO : move parameters outside of function
-
-    # a list of detectors
-    detectors = [sc]
-    # what detector to plot on
-    detector_name = 'sc_chan1'
-    # the motor to scan on
-    motor = th_cal 
-
-    # the approximate theta offset
-    theta_offset = -35.26
-
-
-    # set the d spacing
-    d_spacing = 3.1356
 
     # the sample to use (use from the string supplied)
     if isinstance(D, str):
@@ -397,11 +405,14 @@ def Ecal2_dips(wguess, max_step, D='Si'):
     #detector_name = detectors[0].name
 
     # set up a live plotter
+    global lp
     lp = LivePlot(detector_name, x=motor.name, marker='o', ax=ax)
 
     xdata_total = list()
     ydata_total = list()
+    cnt = 0
     for theta_guess in [theta_guess1, theta_guess2]:
+        cnt += 1
         # scan the first peak
         # the number of points for each side
         npoints = 30
@@ -411,18 +422,99 @@ def Ecal2_dips(wguess, max_step, D='Si'):
         print("Trying to a guess. Moving {} from {} to {} in {} steps".format(motor.name, start, stop, npoints))
         yield from bpp.subs_wrapper(bp.scan(detectors, motor, start, stop, npoints), lp)
         # TODO : check if a peak was found here
+        # find the position c1 in terms of theta
+
+        c1 = lp.x_data[np.argmin(lp.y_data)]
+        res_one = fit_Ecal_onedip(lp.x_data, lp.y_data, c1,
+                                  guessed_sigma=guessed_sigma)
+        plt.figure('fitting coarse {}'.format(cnt));plt.clf()
+        plt.plot(lp.x_data, lp.y_data, linewidth=0, marker='o', color='b', label="data")
+        plt.plot(lp.x_data, res_one.best_fit, color='r', label="fit")
+
+        c1_fit = res_one.best_values['c1']
+        theta_guess = c1_fit
+        print("Found center at {}, running finer scan".format(c1_fit))
+        npoints = 120
+        start, stop = theta_guess - guessed_sigma*nsigmas,  theta_guess + guessed_sigma*nsigmas
+        # reverse to go negative
+        start, stop = stop, start
+        print("Trying to a guess. Moving {} from {} to {} in {} steps".format(motor.name, start, stop, npoints))
+        yield from bpp.subs_wrapper(bp.scan(detectors, motor, start, stop, npoints), lp)
+        # add to total
         xdata_total.extend(lp.x_data)
         ydata_total.extend(lp.y_data)
 
+        plt.figure('fine scan {}'.format(cnt));plt.clf()
+        plt.plot(lp.x_data, lp.y_data, linewidth=0, marker='o', color='b', label="data")
+
+
     myresult.result = fit_Ecal_dips2(xdata_total, ydata_total, wguess=wguess, D=D)
-    
+
 
 class MyResult:
     pass
 
+def fit_Ecal_onedip(xdata, ydata, c1, guessed_sigma=.01):
+    '''
+        This just fits one dip, a PseudoVoigt with inverse amplitude.
+            Useful for getting peak COM.
+    '''
+    # just fit the first
+    global myresult
+
+    # theta-tth factor
+    factor = 1
+    # TODO : a1, a2 the number of peaks (this makes 2*2 = 4)
+    # TODO : Make a Model
+    #def dips(x, c0, wavelength, a1, a2, sigma):
+    def dips(x, c1, a1, sigma):
+        sign = -1
+        result = voigt(x=x, amplitude=sign*a1, center=c1, sigma=sigma)
+        return result
+
+    model = Model(dips) + LinearModel()
+
+    guessed_amplitude = np.abs(np.min(ydata) - np.average(ydata))
+    # Fill out initial guess.
+    init_guess = {'c1': Parameter('intercept', value=c1),
+                  'sigma': Parameter('sigma', value=guessed_sigma),
+                  'a1' : Parameter('a1', guessed_amplitude, min=0),
+                  'intercept' : Parameter("intercept", 0),
+                  'slope' : Parameter("slope", 0),
+                 }
+    params = Parameters(init_guess)
+
+    # fit_kwargs = dict(ftol=1)
+    fit_kwargs = dict()
+    result = model.fit(ydata, x=xdata, params=params, fit_kwargs=fit_kwargs)
+    print("Found center to be at theta : {}".format(result.best_values['c1']))
+
+    plt.figure(2);plt.clf();
+    plt.plot(xdata, ydata, linewidth=0, marker='o', color='b', label="data")
+    plt.plot(xdata, result.best_fit, color='r', label="best fit")
+    plt.legend()
+    return result
+
 
 def fit_Ecal_dips2(xdata, ydata, guessed_sigma=.01, wguess=66., D="Si", theta_offset=-35.26):
-    # just fit the first
+    '''
+        This fits for two peaks.
+
+        Parameters
+        ----------
+        xdata : the xdata (usually theta)
+        ydata : the counts measured
+        guessed_sigma: float, optional
+            the guessed sigma of the peaks (supplied to initial guess)
+        wguess :
+                the guessed wavelength
+        D : str
+            The str identifier for the reference sample (usually just "Si")
+        theta_offset :
+            The offset in theta of the theta motor
+    '''
+    # this is a cludge used to pass result around.
+    # TODO : remove this when we finally agree on a method on how to scan...
     global myresult
 
     if isinstance(D, str):
@@ -433,7 +525,6 @@ def fit_Ecal_dips2(xdata, ydata, guessed_sigma=.01, wguess=66., D="Si", theta_of
     # theta-tth factor
     factor = 1
     offset = theta_offset # degrees
-    # TODO : a1, a2 the number of peaks (this makes 2*2 = 4)
     # TODO : Make a Model
     #def dips(x, c0, wavelength, a1, a2, sigma):
     def dips(x, c0, wavelength, a1, sigma):
@@ -443,16 +534,12 @@ def fit_Ecal_dips2(xdata, ydata, guessed_sigma=.01, wguess=66., D="Si", theta_of
         assert np.all(wavelength < 2 * D), \
             "wavelength would result in illegal arg to arcsin"
         centers = np.arcsin(wavelength / (2 * D))
-        center = cs[0]
-        #c2 = cs[1]
+        # just look at one center for now
+        c1 = centers[0]
+
         result = (voigt(x=x, amplitude=sign*a1, center=c0 - c1, sigma=sigma) +
                   voigt(x=x, amplitude=sign*a1, center=c0 + c1, sigma=sigma))
-        #result += (voigt(x=x, amplitude=sign*a2, center=c0 - c2, sigma=sigma) +
-                       #voigt(x=x, amplitude=sign*a2, center=c0 + c2, sigma=sigma))
-        # ignore the last peaks
-        #if max_n > 2:
-            #result += (voigt(x=x, amplitude=sign*a3, center=c0 - c3, sigma=sigma) +
-                       #voigt(x=x, amplitude=sign*a3, center=c0 + c3, sigma=sigma))
+
         return result
 
     model = Model(dips) + LinearModel()
@@ -467,8 +554,6 @@ def fit_Ecal_dips2(xdata, ydata, guessed_sigma=.01, wguess=66., D="Si", theta_of
                                           min=0.8 * guessed_wavelength,
                                           max=1.2 * guessed_wavelength),
                   'a1' : Parameter('a1', guessed_amplitude, min=0),
-                  #'a2' : Parameter('a2', guessed_amplitude, min=0),
-                  #'a3' : Parameter('a3', guessed_amplitude, min=0),
                  }
     params = Parameters(init_guess)
 
@@ -478,8 +563,8 @@ def fit_Ecal_dips2(xdata, ydata, guessed_sigma=.01, wguess=66., D="Si", theta_of
     print('WAVELENGTH: {} [Angstroms]'.format(myresult.result.values['wavelength']))
 
     plt.figure(2);plt.clf();
-    plt.plot(xdata, myresult.result.best_fit, label="best fit")
-    plt.plot(xdata, ydata, marker='o', label="data")
+    plt.plot(xdata, ydata, linewidth=0, marker='o', color='b', label="data")
+    plt.plot(xdata, myresult.result.best_fit, color='r', label="best fit")
     plt.legend()
 
 myresult = MyResult()

@@ -4,6 +4,10 @@
 import numpy as np
 from ophyd.sim import SynSignal, motor1, motor2
 
+from lmfit import Model, Parameter, Parameters
+from lmfit.models import VoigtModel, LinearModel
+from lmfit.lineshapes import voigt
+
 class SynGaussPeaks(SynSignal):
     """
     Evaluate a point on a peaks based on the value of a motor.
@@ -57,6 +61,51 @@ class SynGaussPeaks(SynSignal):
 
         super().__init__(func=func, name=name, **kwargs)
 
+D_SPACINGS = {'LaB6': np.array([4.15772, 2.94676, 2.40116]),
+              'Si': 5.43095 / np.array([np.sqrt(3), np.sqrt(8), np.sqrt(11), np.sqrt(27)]),
+             }
+
+import numpy as np
+
+#def gaussian(theta, center, width):
+#    return 1500 / (np.sqrt(2*np.pi) * width) * np.exp(-((theta - center) / width)**2 / 2)
+
+# for the simulation
+SIMULATED_D = "Si"
+def intensity(theta, amplitude, width, wavelength):
+    result = np.clip(5 * np.random.randn(), 0, None)  # Gaussian noise
+    for d in D_SPACINGS['Si']:
+        assert wavelength < 2 * d, \
+            "wavelength would result in illegal arg to arcsin"
+        try:
+            center = np.arcsin(wavelength / (2 * d))
+        except Exception:
+            print("DEAD"); center = 0
+        result += voigt(theta, amplitude, center, width)
+        result += voigt(-theta, amplitude, center, width)
+    return result
+
+#from bluesky.examples import Reader, Mover
+
+
+def current_intensity_peaks():
+    amplitude = 0.5
+    width = 0.004  # degrees
+    wavelength = 12.398 / 66.4 # angtroms
+    two_theta = motor1.read()['motor1']['value']  # degrees
+    theta = np.deg2rad(two_theta / 2)  # radians
+    return intensity(theta, amplitude, np.deg2rad(width), wavelength)
+
+def current_intensity_dips():
+    amplitude = 0.5
+    width = 0.004  # degrees
+    wavelength = 12.398 / 66.4 # angtroms
+    hw_theta = motor1.read()['motor1']['value']  # degrees
+    theta = np.deg2rad(hw_theta + 35.26)  # radians
+    return -intensity(theta, amplitude, np.deg2rad(width), wavelength)
+
+th_cal = motor1
+sc = SynSignal(name="det", func=current_intensity_dips)
 
 
 ''' test sim motors
