@@ -85,9 +85,6 @@ def intensity(theta, amplitude, width, wavelength):
         result += voigt(-theta, amplitude, center, width)
     return result
 
-#from bluesky.examples import Reader, Mover
-
-
 def current_intensity_peaks():
     amplitude = 0.5
     width = 0.004  # degrees
