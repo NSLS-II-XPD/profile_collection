@@ -279,17 +279,24 @@ def RockingEcal(guess_energy, offset=35.26, D='Si'):
 # simulated two theta detector
 # for intensity_peaks/dips simulation
 # for intensity_peaks/dips simulation
-sc_peaks = SynSignal(name="det", func=current_intensity_peaks)
-sc_dips = SynSignal(name="det", func=current_intensity_dips)
+#sc_peaks = SynSignal(name="det", func=current_intensity_peaks)
+#sc_dips = SynSignal(name="det", func=current_intensity_dips)
 
 from bluesky.plans import adaptive_scan
 
-def Ecal_dips(Eguess=None, D="Si"):
+def Ecal_dips(detectors, motor, start, stop, min_step, max_step, target_delta,
+              threshold, Eguess=None, D="Si", detector_name="sc_chan1", fignum=None):
     '''
         Run Ecal
 
         Parameters
         ----------
+        detectors: list of detectors to scan on 
+            will only fit for the first detector's result
+        motor : the motor to scan on
+        start : motor start
+        stop : motor stop
+
         Eguess : float, optional
             The guessed energy
             If set, will try fitting
@@ -297,14 +304,24 @@ def Ecal_dips(Eguess=None, D="Si"):
     if isinstance(D, str):
         D = D_SPACINGS[D]
 
-    lp = LivePlot('det', x='motor1', marker='o')
+    if fignum is not None:
+        fig = plt.figure(fignum)
+        fig.clf();
+        ax = plt.gca();
+    else:
+        ax = None
+    #detector_name = detectors[0].name
+    lp = LivePlot(detector_name, x=motor.name, marker='o', ax=ax)
     # TODO : make limits settable from outside
-    yield from bpp.subs_wrapper(adaptive_scan([sc_dips],'det', motor1, 2-35.26,
-                                              -2-35.26,
-                                              min_step=.001, max_step=.1,
-                                              target_delta=1,
-                                              backstep=True, threshold=.8),
-                                lp)
+    #yield from bpp.subs_wrapper(adaptive_scan(detectors, detector_name, motor, start,
+                                              #stop,
+                                              #min_step=min_step, max_step=max_step,
+                                              #target_delta=target_delta,
+                                              #backstep=True, threshold=threshold),
+                                #lp)
+    # Just do small step plot for now
+    num = int(abs((stop-start)/max_step))
+    yield from bpp.subs_wrapper(bp.scan(detectors, motor, start, stop, num), lp)
     if Eguess is not None:
         # get th data
         xdata = lp.x_data
@@ -313,23 +330,109 @@ def Ecal_dips(Eguess=None, D="Si"):
     return lp
 
 
+
+
+#lp = LivePlot(y='det', x='motor1', marker='o')
+
+# RE(Ecal_dips(66))
+# RE(Ecal_dips([sc], th_cal, -33.4, -37, 0.001, 0.02, 5000, 50000, Eguess=66.8, D='Si'))
+
+
+'''
+    New idea for calibration scan:
+        Input:
+            Eguess : guessed energy
+            max_step: max step we take to find peak
+            theta_guesses : approx guess of peaks from left to right
+            theta_interval : starting interval for scanning in theta
+
+        Start a fine scan in theta.
+            If no peak found, scan larger interval
+
+'''
+
+#Ecal2_dips([-36.91, -33.5], 66., max_step=.04, Npoints=20, D="Si", fignum=2):
+def Ecal2_dips(wguess, max_step, D='Si'):
+    '''
+        theta_guesses : the list of guess thetas ordered from low to high
+        wguess : the guessed wavelength
+        
+
+    '''
+    global myresult
+
+    # TODO : move parameters outside of function
+
+    # a list of detectors
+    detectors = [sc]
+    # what detector to plot on
+    detector_name = 'sc_chan1'
+    # the motor to scan on
+    motor = th_cal 
+
+    # the approximate theta offset
+    theta_offset = -35.26
+
+
+    # set the d spacing
+    d_spacing = 3.1356
+
+    # the sample to use (use from the string supplied)
+    if isinstance(D, str):
+        D = D_SPACINGS[D]
+    cen_guesses = np.degrees(np.arcsin(wguess/ (2 * D)))
+    # only use the first center as a guess
+    cen_guess = cen_guesses[0]
+
+    theta_guess1, theta_guess2  = theta_offset + cen_guess, theta_offset - cen_guess
+    print("Trying {} + {} = {}".format(theta_offset, cen_guess, theta_offset+cen_guess))
+    print("Trying {} - {} = {}".format(theta_offset, cen_guess, theta_offset-cen_guess))
+
+
+    # set up the live Plotting
+    fig = plt.figure(detector_name)
+    fig.clf();
+    ax = plt.gca();
+
+    #detector_name = detectors[0].name
+
+    # set up a live plotter
+    lp = LivePlot(detector_name, x=motor.name, marker='o', ax=ax)
+
+    xdata_total = list()
+    ydata_total = list()
+    for theta_guess in [theta_guess1, theta_guess2]:
+        # scan the first peak
+        # the number of points for each side
+        npoints = 30
+        start, stop = theta_guess - max_step*npoints, theta_guess + max_step*npoints
+        # reverse to go negative
+        start, stop = stop, start
+        print("Trying to a guess. Moving {} from {} to {} in {} steps".format(motor.name, start, stop, npoints))
+        yield from bpp.subs_wrapper(bp.scan(detectors, motor, start, stop, npoints), lp)
+        # TODO : check if a peak was found here
+        xdata_total.extend(lp.x_data)
+        ydata_total.extend(lp.y_data)
+
+    myresult.result = fit_Ecal_dips2(xdata_total, ydata_total, wguess=wguess, D=D)
+    
+
 class MyResult:
     pass
 
-myresult = MyResult()
 
-def fit_Ecal_dips(xdata, ydata, guessed_sigma=.01, guessed_energy=66., D="LaB6"):
+def fit_Ecal_dips2(xdata, ydata, guessed_sigma=.01, wguess=66., D="Si", theta_offset=-35.26):
+    # just fit the first
     global myresult
 
     if isinstance(D, str):
         D = D_SPACINGS[D]
 
-    guessed_wavelength = 12.398 / guessed_energy  # angtroms
-    max_n = 3
+    guessed_wavelength = wguess
 
     # theta-tth factor
     factor = 1
-    offset = -35.26  # degrees
+    offset = theta_offset # degrees
     # TODO : a1, a2 the number of peaks (this makes 2*2 = 4)
     # TODO : Make a Model
     #def dips(x, c0, wavelength, a1, a2, sigma):
@@ -339,8 +442,8 @@ def fit_Ecal_dips(xdata, ydata, guessed_sigma=.01, guessed_energy=66., D="LaB6")
         x = np.deg2rad(x / factor - offset)  # radians
         assert np.all(wavelength < 2 * D), \
             "wavelength would result in illegal arg to arcsin"
-        cs = np.arcsin(wavelength / (2 * D))
-        c1 = cs[0]
+        centers = np.arcsin(wavelength / (2 * D))
+        center = cs[0]
         #c2 = cs[1]
         result = (voigt(x=x, amplitude=sign*a1, center=c0 - c1, sigma=sigma) +
                   voigt(x=x, amplitude=sign*a1, center=c0 + c1, sigma=sigma))
@@ -379,7 +482,4 @@ def fit_Ecal_dips(xdata, ydata, guessed_sigma=.01, guessed_energy=66., D="LaB6")
     plt.plot(xdata, ydata, marker='o', label="data")
     plt.legend()
 
-
-#lp = LivePlot(y='det', x='motor1', marker='o')
-
-# RE(Ecal_dips(66))
+myresult = MyResult()
