@@ -20,19 +20,14 @@ from xpdacq.xpdacq_conf import (glbl_dict, configure_device,
 
 # configure experiment device being used in current version
 if glbl_dict['is_simulation']:
-    from xpdacq.simulation import xpd_pe1c, db, cs700, shctl1
+    from xpdacq.simulation import (xpd_pe1c, db, cs700, shctl1,
+                                   ring_current, fb)
+    pe1c = xpd_pe1c # alias
 
-    configure_device(area_det=xpd_pe1c, shutter=shctl1,
-                     temp_controller=cs700, db=db)
-else:
-    # FIXME: create synthetic ring current object in fullness of time
-    from ophyd import EpicsSignalRO
-
-    ring_current = EpicsSignalRO('SR:OPS-BI{DCCT:1}I:Real-I',
-                                 name='ring_current')
-    configure_device(area_det=pe1c, shutter=shctl1,
-                     temp_controller=cs700, db=db,
-                     ring_current=ring_current)
+configure_device(area_det=pe1c, shutter=shctl1,
+                 temp_controller=cs700, db=db,
+                 filter_bank=fb,
+                 ring_current=ring_current)
 
 # cache previous glbl state
 reload_glbl_dict = _reload_glbl()
@@ -79,7 +74,7 @@ else:
 from xpdacq.calib import *
 
 # analysis functions, only at beamline
-# from xpdan.data_reduction import *
+from xpdan.data_reduction import *
 
 print('OK, ready to go.  To continue, follow the steps in the xpdAcq')
 print('documentation at http://xpdacq.github.io/xpdacq\n')
