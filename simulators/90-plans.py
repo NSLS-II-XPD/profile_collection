@@ -11,7 +11,7 @@ import bluesky.plan_stubs as bps
 import bluesky.plans as bp
 import bluesky.preprocessors as bpp
 from bluesky.callbacks import LiveTable, LivePlot, LiveFit, LiveFitPlot
-from lmfit import Model, Parameter
+from lmfit import Model, Parameter, Parameters
 from lmfit.models import VoigtModel, LinearModel
 from lmfit.lineshapes import voigt
 #from bluesky.plans import adaptive_scan, subs_wrapper, stage_decorator, run_decorator, reset_positions_wrapper, one_1d_step
@@ -64,9 +64,11 @@ import numpy as np
 #def gaussian(theta, center, width):
 #    return 1500 / (np.sqrt(2*np.pi) * width) * np.exp(-((theta - center) / width)**2 / 2)
 
+# for the simulation
+SIMULATED_D = "Si"
 def intensity(theta, amplitude, width, wavelength):
     result = np.clip(5 * np.random.randn(), 0, None)  # Gaussian noise
-    for d in D_SPACINGS['LaB6']:
+    for d in D_SPACINGS['Si']:
         assert wavelength < 2 * d, \
             "wavelength would result in illegal arg to arcsin"
         try:
@@ -167,22 +169,29 @@ def Ecal(detectors, motor, guessed_energy, mode, *,
     if max_n > 3:
         raise NotImplementedError("I only work for n up to 3.")
 
-    def peaks(x, c0, wavelength, a1, a2, a3, sigma):
+    # todo : make a model and sum them
+    def peaks(x, c0, wavelength, a1, a2, sigma):
         # x comes from hardware in [theta or two-theta] degrees
         x = np.deg2rad(x / factor - offset)  # radians
         assert np.all(wavelength < 2 * D), \
             "wavelength would result in illegal arg to arcsin"
-        c1, c2, c3 = np.arcsin(wavelength / (2 * D))
+        cs = np.arcsin(wavelength / (2 * D))
+        c1 = cs[0]
+        c2 = cs[1]
+        #c3 = cs[2]
+        # first peak
         result = (voigt(x=x, amplitude=sign*a1, center=c0 - c1, sigma=sigma) +
                   voigt(x=x, amplitude=sign*a1, center=c0 + c1, sigma=sigma))
-        if max_n > 1:
-            result += (voigt(x=x, amplitude=sign*a2, center=c0 - c2, sigma=sigma) +
+
+        # second peak
+        result += (voigt(x=x, amplitude=sign*a2, center=c0 - c2, sigma=sigma) +
                        voigt(x=x, amplitude=sign*a2, center=c0 + c2, sigma=sigma))
-        if max_n > 2:
-            result += (voigt(x=x, amplitude=sign*a3, center=c0 - c3, sigma=sigma) +
-                       voigt(x=x, amplitude=sign*a3, center=c0 + c3, sigma=sigma))
+
+        # third peak
+        #result += (voigt(x=x, amplitude=sign*a3, center=c0 - c3, sigma=sigma) +
+                       #voigt(x=x, amplitude=sign*a3, center=c0 + c3, sigma=sigma))
         return result
-                  
+
     model = Model(peaks) + LinearModel()
 
     # Fill out initial guess.
@@ -207,9 +216,9 @@ def Ecal(detectors, motor, guessed_energy, mode, *,
     plot = LivePlot(detectors[0].name, motor.name, linestyle='none', marker='o', ax=ax)
     lfp = LiveFitPlot(lf, ax=ax, color='r')
     subs = [lfp, plot]
-    
+
     #detectors = [det]#[sc]
-    
+
     # Set up metadata -- based on the sourcecode of bluesky.plans.scan.
     _md = {'detectors': [det.name for det in detectors],
            'motors': [motor.name],
@@ -275,145 +284,102 @@ sc_dips = SynSignal(name="det", func=current_intensity_dips)
 
 from bluesky.plans import adaptive_scan
 
-lp = LivePlot('det', x='motor1', marker='o')
-def myplan():
-    yield from bpp.subs_wrapper(adaptive_scan([sc_dips],'det', motor1, 6-35.26,
-                                              -6-35.26,
-                                              min_step=.001, max_step=.5,
-                                              target_delta=.1,
+def Ecal_dips(Eguess=None, D="Si"):
+    '''
+        Run Ecal
+
+        Parameters
+        ----------
+        Eguess : float, optional
+            The guessed energy
+            If set, will try fitting
+    '''
+    if isinstance(D, str):
+        D = D_SPACINGS[D]
+
+    lp = LivePlot('det', x='motor1', marker='o')
+    # TODO : make limits settable from outside
+    yield from bpp.subs_wrapper(adaptive_scan([sc_dips],'det', motor1, 2-35.26,
+                                              -2-35.26,
+                                              min_step=.001, max_step=.1,
+                                              target_delta=1,
                                               backstep=True, threshold=.8),
                                 lp)
+    if Eguess is not None:
+        # get th data
+        xdata = lp.x_data
+        ydata = lp.y_data
+        result = fit_Ecal_dips(xdata, ydata, guessed_energy=Eguess, D=D)
+    return lp
 
-lp = LivePlot(y='det', x='motor1', marker='o')
 
-def myplan_withfit_peaks():
-    global lp
+class MyResult:
+    pass
 
-    mode = 'peaks'
-    guessed_wavelength = 12.398/66.
-    guessed_sigma = .01
-    guessed_amplitude = 800
-    D ='LaB6'
-    max_n = 3
+myresult = MyResult()
+
+def fit_Ecal_dips(xdata, ydata, guessed_sigma=.01, guessed_energy=66., D="LaB6"):
+    global myresult
+
     if isinstance(D, str):
         D = D_SPACINGS[D]
-    if mode == 'peaks':
-        #motor = tth_cal
-        factor = 2
-        offset = 0
-        sign = 1
-    if mode == 'dips':
-        #motor = th_cal
-        factor = 1
-        # theta_hardware = theta_theorhetical + offset
-        offset = -35.26  # degrees
-        sign = -1
 
-    def peaks(x, c0, wavelength, a1, a2, a3, sigma):
+    guessed_wavelength = 12.398 / guessed_energy  # angtroms
+    max_n = 3
+
+    # theta-tth factor
+    factor = 1
+    offset = -35.26  # degrees
+    # TODO : a1, a2 the number of peaks (this makes 2*2 = 4)
+    # TODO : Make a Model
+    #def dips(x, c0, wavelength, a1, a2, sigma):
+    def dips(x, c0, wavelength, a1, sigma):
+        sign = -1
         # x comes from hardware in [theta or two-theta] degrees
         x = np.deg2rad(x / factor - offset)  # radians
         assert np.all(wavelength < 2 * D), \
             "wavelength would result in illegal arg to arcsin"
-        c1, c2, c3 = np.arcsin(wavelength / (2 * D))
+        cs = np.arcsin(wavelength / (2 * D))
+        c1 = cs[0]
+        #c2 = cs[1]
         result = (voigt(x=x, amplitude=sign*a1, center=c0 - c1, sigma=sigma) +
                   voigt(x=x, amplitude=sign*a1, center=c0 + c1, sigma=sigma))
-        if max_n > 1:
-            result += (voigt(x=x, amplitude=sign*a2, center=c0 - c2, sigma=sigma) +
-                       voigt(x=x, amplitude=sign*a2, center=c0 + c2, sigma=sigma))
-        if max_n > 2:
-            result += (voigt(x=x, amplitude=sign*a3, center=c0 - c3, sigma=sigma) +
-                       voigt(x=x, amplitude=sign*a3, center=c0 + c3, sigma=sigma))
+        #result += (voigt(x=x, amplitude=sign*a2, center=c0 - c2, sigma=sigma) +
+                       #voigt(x=x, amplitude=sign*a2, center=c0 + c2, sigma=sigma))
+        # ignore the last peaks
+        #if max_n > 2:
+            #result += (voigt(x=x, amplitude=sign*a3, center=c0 - c3, sigma=sigma) +
+                       #voigt(x=x, amplitude=sign*a3, center=c0 + c3, sigma=sigma))
         return result
 
-    model = Model(peaks) + LinearModel()
+    model = Model(dips) + LinearModel()
+
+    guessed_amplitude = np.abs(np.min(ydata) - np.average(ydata))
+    # Fill out initial guess.
     init_guess = {'intercept': Parameter('intercept', value=0, min=-100, max=100),
                   'slope': Parameter('slope', value=0, min=-100, max=100),
                   'sigma': Parameter('sigma', value=np.deg2rad(guessed_sigma)),
-                  'c0': Parameter('c0', value=np.deg2rad(0), min=-0.2, max=0.2),
+                  'c0': Parameter('c0', value=np.deg2rad(0)),
                   'wavelength': Parameter('wavelength', guessed_wavelength,
                                           min=0.8 * guessed_wavelength,
                                           max=1.2 * guessed_wavelength),
                   'a1' : Parameter('a1', guessed_amplitude, min=0),
-                  'a2' : Parameter('a2', guessed_amplitude, min=0),
-                  'a3' : Parameter('a3', guessed_amplitude, min=0),}
-                                          # min=0, max=np.min(2 * D))}
+                  #'a2' : Parameter('a2', guessed_amplitude, min=0),
+                  #'a3' : Parameter('a3', guessed_amplitude, min=0),
+                 }
+    params = Parameters(init_guess)
 
-    kwargs = {'min': 0.5 * guessed_amplitude,
-              'max': 2 * guessed_amplitude}
+    # fit_kwargs = dict(ftol=1)
+    fit_kwargs = dict()
+    myresult.result = model.fit(ydata, x=xdata, params=params, fit_kwargs=fit_kwargs)
+    print('WAVELENGTH: {} [Angstroms]'.format(myresult.result.values['wavelength']))
 
-    print(init_guess)
-    lf = LiveFit(model, 'det', {'x': 'motor1'}, init_guess,
-                 update_every=100)
-    lfp = LiveFitPlot(lf, color='r')
+    plt.figure(2);plt.clf();
+    plt.plot(xdata, myresult.result.best_fit, label="best fit")
+    plt.plot(xdata, ydata, marker='o', label="data")
+    plt.legend()
 
-    yield from bpp.subs_wrapper(adaptive_scan([sc_peaks],'det', motor1, 6, -6,
-                                              min_step=.001, max_step=1,
-                                              target_delta=.01,
-                                              backstep=.01, threshold=.001),
-                                [lp])
 
-def myplan_withfit_dips():
-    global lp
+#lp = LivePlot(y='det', x='motor1', marker='o')
 
-    mode = 'peaks'
-    guessed_wavelength = 12.398/66.
-    guessed_sigma = .01
-    guessed_amplitude = 800
-    D ='LaB6'
-    max_n = 3
-    if isinstance(D, str):
-        D = D_SPACINGS[D]
-    if mode == 'peaks':
-        #motor = tth_cal
-        factor = 2
-        offset = 0
-        sign = 1
-    if mode == 'dips':
-        #motor = th_cal
-        factor = 1
-        # theta_hardware = theta_theorhetical + offset
-        offset = -35.26  # degrees
-        sign = -1
-
-    def peaks(x, c0, wavelength, a1, a2, a3, sigma):
-        # x comes from hardware in [theta or two-theta] degrees
-        x = np.deg2rad(x / factor - offset)  # radians
-        assert np.all(wavelength < 2 * D), \
-            "wavelength would result in illegal arg to arcsin"
-        c1, c2, c3 = np.arcsin(wavelength / (2 * D))
-        result = (voigt(x=x, amplitude=sign*a1, center=c0 - c1, sigma=sigma) +
-                  voigt(x=x, amplitude=sign*a1, center=c0 + c1, sigma=sigma))
-        if max_n > 1:
-            result += (voigt(x=x, amplitude=sign*a2, center=c0 - c2, sigma=sigma) +
-                       voigt(x=x, amplitude=sign*a2, center=c0 + c2, sigma=sigma))
-        if max_n > 2:
-            result += (voigt(x=x, amplitude=sign*a3, center=c0 - c3, sigma=sigma) +
-                       voigt(x=x, amplitude=sign*a3, center=c0 + c3, sigma=sigma))
-        return result
-
-    model = Model(peaks) + LinearModel()
-    init_guess = {'intercept': Parameter('intercept', value=0, min=-100, max=100),
-                  'slope': Parameter('slope', value=0, min=-100, max=100),
-                  'sigma': Parameter('sigma', value=np.deg2rad(guessed_sigma)),
-                  'c0': Parameter('c0', value=np.deg2rad(0), min=-0.2, max=0.2),
-                  'wavelength': Parameter('wavelength', guessed_wavelength,
-                                          min=0.8 * guessed_wavelength,
-                                          max=1.2 * guessed_wavelength),
-                  'a1' : Parameter('a1', guessed_amplitude, min=0),
-                  'a2' : Parameter('a2', guessed_amplitude, min=0),
-                  'a3' : Parameter('a3', guessed_amplitude, min=0),}
-                                          # min=0, max=np.min(2 * D))}
-
-    kwargs = {'min': 0.5 * guessed_amplitude,
-              'max': 2 * guessed_amplitude}
-
-    print(init_guess)
-    lf = LiveFit(model, 'det', {'x': 'motor1'}, init_guess,
-                 update_every=100)
-    lfp = LiveFitPlot(lf, color='r')
-
-    yield from bpp.subs_wrapper(adaptive_scan([sc_dips],'det', motor1, 6, -6,
-                                              min_step=.001, max_step=1,
-                                              target_delta=.01,
-                                              backstep=.01, threshold=.001),
-                                [lp])
+# RE(Ecal_dips(66))
