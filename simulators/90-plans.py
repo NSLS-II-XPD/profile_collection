@@ -330,7 +330,8 @@ def Ecal_dips(detectors, motor, wguess, max_step, D='Si', detector_name='sc_chan
 
 
     myresult.result = fit_Ecal_dips_symmetric(xdata_total, ydata_total, wguess=wguess, D=D)
-    
+    myresult.xdata =  xdata_total
+    myresult.ydata =  ydata_total
 
 
 class MyResult:
