@@ -229,7 +229,8 @@ def RockingEcal(guess_energy, offset=35.26, D='Si'):
 
 # New calibration scan
 def Ecal_dips(detectors, motor, wguess, max_step, D='Si', detector_name='sc_chan1',
-               theta_offset=-35.26, guessed_sigma=.002, nsigmas=10):
+               theta_offset=-35.26, guessed_sigma=.002, nsigmas=10,
+               output_file="result.csv"):
     '''
         This is the new Ecal scan for dips.
             We should treat peaks separately to simplify matters (leaves for
@@ -259,7 +260,7 @@ def Ecal_dips(detectors, motor, wguess, max_step, D='Si', detector_name='sc_chan
 
         Example
         -------
-        RE(Ecal2_dips([sc], motor1, wguess=.1878, max_step=.004, D='Si',
+        RE(Ecal_dips([sc], motor1, wguess=.1878, max_step=.004, D='Si',
         detector_name=sc.name, theta_offset=-35.26, guessed_sigma=.002, nsigmas=15))
 
     '''
@@ -329,6 +330,7 @@ def Ecal_dips(detectors, motor, wguess, max_step, D='Si', detector_name='sc_chan
 
 
     myresult.result = fit_Ecal_dips_symmetric(xdata_total, ydata_total, wguess=wguess, D=D)
+    
 
 
 class MyResult:
@@ -340,8 +342,6 @@ def fit_Ecal_onedip(xdata, ydata, c1, guessed_sigma=.01):
             Useful for getting peak COM.
     '''
     # just fit the first
-    global myresult
-
     # theta-tth factor
     factor = 1
     # TODO : a1, a2 the number of peaks (this makes 2*2 = 4)
@@ -396,8 +396,6 @@ def fit_Ecal_dips_symmetric(xdata, ydata, guessed_sigma=.01, wguess=66., D="Si",
     '''
     # this is a cludge used to pass result around.
     # TODO : remove this when we finally agree on a method on how to scan...
-    global myresult
-
     if isinstance(D, str):
         D = D_SPACINGS[D]
 
@@ -443,12 +441,15 @@ def fit_Ecal_dips_symmetric(xdata, ydata, guessed_sigma=.01, wguess=66., D="Si",
 
     # fit_kwargs = dict(ftol=1)
     fit_kwargs = dict()
-    myresult.result = model.fit(ydata, x=xdata, params=params, fit_kwargs=fit_kwargs)
+    result = model.fit(ydata, x=xdata, params=params, fit_kwargs=fit_kwargs)
     print('WAVELENGTH: {} [Angstroms]'.format(myresult.result.values['wavelength']))
+    print('CENTER is : {} [deg]'.format(myresult.result.values['c0']))
 
     plt.figure(2);plt.clf();
     plt.plot(xdata, ydata, linewidth=0, marker='o', color='b', label="data")
     plt.plot(xdata, myresult.result.best_fit, color='r', label="best fit")
     plt.legend()
+    return result
+
 
 myresult = MyResult()
