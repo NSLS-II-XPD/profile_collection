@@ -354,13 +354,14 @@ def fit_Ecal_onedip(xdata, ydata, c1, guessed_sigma=.01):
 
     model = Model(dips) + LinearModel()
 
-    guessed_amplitude = np.abs(np.min(ydata) - np.average(ydata))
+    guessed_average = np.mean(ydata)
+    guessed_amplitude = np.abs(np.min(ydata) - guessed_average)
     # Fill out initial guess.
     init_guess = {'c1': Parameter('intercept', value=c1),
                   'sigma': Parameter('sigma', value=guessed_sigma),
                   'a1' : Parameter('a1', guessed_amplitude, min=0),
                   'intercept' : Parameter("intercept", 0),
-                  'slope' : Parameter("slope", 0),
+                  'slope' : Parameter("slope", guessed_average),
                  }
     params = Parameters(init_guess)
 
@@ -424,10 +425,13 @@ def fit_Ecal_dips_symmetric(xdata, ydata, guessed_sigma=.01, wguess=66., D="Si",
 
     model = Model(dips) + LinearModel()
 
-    guessed_amplitude = np.abs(np.min(ydata) - np.average(ydata))
+    guessed_average = np.max(ydata)
+    guessed_amplitude = np.abs(np.min(ydata) - np.mean(ydata))
     # Fill out initial guess.
-    init_guess = {'intercept': Parameter('intercept', value=0, min=-100, max=100),
-                  'slope': Parameter('slope', value=0, min=-100, max=100),
+    init_guess = {'intercept': Parameter('intercept', value=guessed_average,
+                                         min=-100, max=100, vary=False),
+                  'slope': Parameter('slope', value=0, min=-100, max=100,
+                                     vary=False),
                   'sigma': Parameter('sigma', value=np.deg2rad(guessed_sigma)),
                   'c0': Parameter('c0', value=np.deg2rad(0)),
                   'wavelength': Parameter('wavelength', guessed_wavelength,

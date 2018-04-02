@@ -99,7 +99,7 @@ def current_intensity_dips():
     wavelength = 12.398 / 66.4 # angtroms
     hw_theta = motor1.read()['motor1']['value']  # degrees
     theta = np.deg2rad(hw_theta + 35.26)  # radians
-    return -intensity(theta, amplitude, np.deg2rad(width), wavelength)
+    return -intensity(theta, amplitude, np.deg2rad(width), wavelength) + 10000
 
 th_cal = motor1
 sc = SynSignal(name="det", func=current_intensity_dips)
