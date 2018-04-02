@@ -426,8 +426,7 @@ def fit_Ecal_dips_symmetric(xdata, ydata, guessed_sigma=.01, wguess=66., D="Si",
     guessed_average = np.max(ydata)
     guessed_amplitude = np.abs(np.min(ydata) - np.mean(ydata))
     # Fill out initial guess.
-    init_guess = {'intercept': Parameter('intercept', value=guessed_average,
-                                         min=-100, max=100, vary=False),
+    init_guess = {'intercept': Parameter('intercept', value=guessed_average,),
                   'slope': Parameter('slope', value=0, min=-100, max=100,
                                      vary=False),
                   'sigma': Parameter('sigma', value=np.deg2rad(guessed_sigma)),
