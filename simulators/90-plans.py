@@ -441,12 +441,12 @@ def fit_Ecal_dips_symmetric(xdata, ydata, guessed_sigma=.01, wguess=66., D="Si",
     # fit_kwargs = dict(ftol=1)
     fit_kwargs = dict()
     result = model.fit(ydata, x=xdata, params=params, fit_kwargs=fit_kwargs)
-    print('WAVELENGTH: {} [Angstroms]'.format(myresult.result.values['wavelength']))
-    print('CENTER is : {} [deg]'.format(myresult.result.values['c0']))
+    print('WAVELENGTH: {} [Angstroms]'.format(result.values['wavelength']))
+    print('CENTER is : {} [deg]'.format(result.values['c0']))
 
     plt.figure(2);plt.clf();
     plt.plot(xdata, ydata, linewidth=0, marker='o', color='b', label="data")
-    plt.plot(xdata, myresult.result.best_fit, color='r', label="best fit")
+    plt.plot(xdata, result.best_fit, color='r', label="best fit")
     plt.legend()
     return result
 
