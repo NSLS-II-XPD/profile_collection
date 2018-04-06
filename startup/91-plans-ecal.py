@@ -8,7 +8,7 @@ def initialize_ecal():
     # move the filters in
     # move crystal in
     # open the fast shutter
-    print("Finalizing ecal, moving setup in")
+    print("Initializing ecal, moving setup in")
     print("Moving filters in")
     yield from bps.mov(shctl1, 60)
     yield from bps.mov(ecal_x, 100)
