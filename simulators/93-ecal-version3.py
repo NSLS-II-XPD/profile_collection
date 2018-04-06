@@ -89,12 +89,14 @@ def guess_theta_from_reference(wguess, D="Si"):
     return cen_guesses
 
 
-def wavelength_from_theta(theta, D="Si"):
+def wavelength_from_theta(theta, d):
     '''
         Get the wavelength from theta
+        theta : the angle (theta)
+            for twotheta divide by two before supplying here
+        d : the d spacing
     '''
-    D = D_SPACINGS[D]
-    return np.sin(np.radians(theta))*2*D
+    return 2*d*np.sin(np.radians(theta))
 
 # New calibration scan plan
 def Ecal_dips(detectors, motor, wguess, max_step, D='Si', detector_name='sc_chan1',
@@ -228,11 +230,13 @@ def Ecal_dips(detectors, motor, wguess, max_step, D='Si', detector_name='sc_chan
 
     new_theta_offset = (peak_left_cen+peak_right_cen)*.5
     average_peak_theta = (np.abs(peak_left_cen-new_theta_offset) +
-                          np.abs(peak_right_cen-new_theta_offset))
+                          np.abs(peak_right_cen-new_theta_offset))*.5
     print("new theta offset : {} deg".format(new_theta_offset))
     print("average peak theta: {} deg".format(average_peak_theta))
 
-    fitted_wavelength = wavelength_from_theta(average_peak_theta, D="Si")
+    # use first d spacing
+    fitted_wavelength = wavelength_from_theta(average_peak_theta,
+                                              D_SPACINGS[D][0])
     print("Fitted wavelength is {} angs".format(fitted_wavelength))
 
     # in case we want access to the results list
