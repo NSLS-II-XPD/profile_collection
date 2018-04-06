@@ -6,6 +6,8 @@ from ophyd import EpicsSignal
 
 th_cal = EpicsMotor('XF:28IDC-ES:1{Dif:2-Ax:Th}Mtr', name='th_cal')
 tth_cal = EpicsMotor('XF:28IDC-ES:1{Dif:2-Ax:2Th}Mtr', name='tth_cal')
+ecal_x = EpicsMotor('XF:28IDC-ES:1{Dif:2-Ax:X}Mtr', name='ecal_x')
+ecal_y = EpicsMotor('XF:28IDC-ES:1{Dif:2-Ax:Y}Mtr', name='ecal_y')
 
 # Tim test with Sanjit. Delete it if anything goes wrong
 ss_stg2_x = EpicsMotor('XF:28IDC-ES:1{Stg:Smpl2-Ax:X}Mtr', name='ss_stg2_x')
