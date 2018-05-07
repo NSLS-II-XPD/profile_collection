@@ -109,7 +109,11 @@ def take_dark(cam, light_field, dark_field_name):
 
 
 
-class XPDTIFFPlugin(TIFFPlugin, FileStoreTIFFSquashing,
+from copy import deepcopy
+FileStoreTIFFSquashing4k = deepcopy(FileStoreTIFFSquashing)
+FileStoreTIFFSquashing4k.write_path_template = None
+
+class XPDTIFFPlugin4k(TIFFPlugin, FileStoreTIFFSquashing4k,
                     FileStoreIterativeWrite):
     pass
 
@@ -126,6 +130,52 @@ class XPDPerkinElmer(PerkinElmerDetector):
     tiff = C(XPDTIFFPlugin, 'TIFF1:',
              write_path_template='H:/pe1_data/%Y/%m/%d/',
              read_path_template='/direct/XF28ID2/pe1_data/%Y/%m/%d/',
+             cam_name='cam',  # used to configure "tiff squashing"
+             proc_name='proc',  # ditto
+             read_attrs=[],
+             root='/direct/XF28ID2/',
+             reg=db.reg)
+
+    # hdf5 = C(XPDHDF5Plugin, 'HDF1:',
+    #          write_path_template='G:/pe1_data/%Y/%m/%d/',
+    #          read_path_template='/direct/XF28ID2/pe1_data/%Y/%m/%d/',
+    #          root='/direct/XF28ID2/', reg=db.reg)
+
+    proc = C(ProcessPlugin, 'Proc1:')
+
+    # These attributes together replace `num_images`. They control
+    # summing images before they are stored by the detector (a.k.a. "tiff
+    # squashing").
+    images_per_set = C(Signal, value=1, add_prefix=())
+    number_of_sets = C(Signal, value=1, add_prefix=())
+
+    stats1 = C(StatsPlugin, 'Stats1:')
+    stats2 = C(StatsPlugin, 'Stats2:')
+    stats3 = C(StatsPlugin, 'Stats3:')
+    stats4 = C(StatsPlugin, 'Stats4:')
+    stats5 = C(StatsPlugin, 'Stats5:')
+
+    roi1 = C(ROIPlugin, 'ROI1:')
+    roi2 = C(ROIPlugin, 'ROI2:')
+    roi3 = C(ROIPlugin, 'ROI3:')
+    roi4 = C(ROIPlugin, 'ROI4:')
+
+    # dark_image = C(SavedImageSignal, None)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.stage_sigs.update([(self.cam.trigger_mode, 'Internal'),
+                               ])
+
+class XPDPerkinElmer4k(PerkinElmerDetector):
+    image = C(ImagePlugin, 'image1:')
+    _default_configuration_attrs = (
+        PerkinElmerDetector._default_configuration_attrs +
+        ('images_per_set', 'number_of_sets'))
+
+    tiff = C(XPDTIFFPlugin, 'TIFF1:',
+             write_path_template='E:\\pe2_data\\%Y\\%m\\%d\\',
+             read_path_template='/direct/XF28ID2/pe2_data/%Y/%m/%d/',
              cam_name='cam',  # used to configure "tiff squashing"
              proc_name='proc',  # ditto
              read_attrs=[],
@@ -237,11 +287,15 @@ class PerkinElmerContinuous(ContinuousAcquisitionTrigger, XPDPerkinElmer):
 class PerkinElmerStandard(SingleTrigger, XPDPerkinElmer):
     pass
 
+class PerkinElmerStandard4k(SingleTrigger, XPDPerkinElmer4k):
+    pass
+
 
 class PerkinElmerMulti(MultiTrigger, XPDPerkinElmer):
     shutter = C(EpicsSignal, 'XF:28IDC-ES:1{Sh:Exp}Cmd-Cmd')
 
 
+'''
 pe1 = PerkinElmerStandard('XF:28IDC-ES:1{Det:PE1}', name='pe1', read_attrs=['tiff'])
 
 
@@ -252,6 +306,12 @@ pe1m = PerkinElmerMulti('XF:28IDC-ES:1{Det:PE1}', name='pe1', read_attrs=['tiff'
 pe1c = PerkinElmerContinuous('XF:28IDC-ES:1{Det:PE1}', name='pe1',
                              read_attrs=['tiff', 'stats1.total'],
                              plugin_name='tiff')
+
+'''
+ 
+pe2 = PerkinElmerStandard('XF:28IDC-ES:1{Det:PE2}', name='pe2',
+                             read_attrs=['tiff'])
+pe2.tiff.write_path_template='E:\\pe2_img\\%Y\\%m\\%d\\'
 
 # some defaults, as an example of how to use this
 # pe1.configure(dict(images_per_set=6, number_of_sets=10))
