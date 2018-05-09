@@ -12,6 +12,27 @@ from ophyd import Signal, EpicsSignal, EpicsSignalRO # Tim test
 from ophyd import Component as C
 from ophyd import StatusBase
 
+
+# monkey patch for trailing slash problem
+def _ensure_trailing_slash(path):
+    """
+    'a/b/c' -> 'a/b/c/'
+
+    EPICS adds the trailing slash itself if we do not, so in order for the
+    setpoint filepath to match the readback filepath, we need to add the
+    trailing slash ourselves.
+    """
+    newpath =  os.path.join(path, '')
+    if newpath[0] != '/':
+        # make it a windows slash
+        newpath[-1] = "\\"
+    return newpath
+
+ophyd.areadetector.filestore_mixins._ensure_trailing_slash = _ensure_trailing_slash
+
+
+
+
 # from shutter import sh1
 
 #shctl1 = EpicsSignal('XF:28IDC-ES:1{Det:PE1}cam1:ShutterMode', name='shctl1')
@@ -113,9 +134,10 @@ from copy import deepcopy
 FileStoreTIFFSquashing4k = deepcopy(FileStoreTIFFSquashing)
 FileStoreTIFFSquashing4k.write_path_template = None
 
-class XPDTIFFPlugin4k(TIFFPlugin, FileStoreTIFFSquashing4k,
+class XPDTIFFPlugin(TIFFPlugin, FileStoreTIFFSquashing,
                     FileStoreIterativeWrite):
     pass
+
 
 
 class XPDHDF5Plugin(HDF5Plugin, FileStoreHDF5IterativeWrite):
@@ -174,7 +196,7 @@ class XPDPerkinElmer4k(PerkinElmerDetector):
         ('images_per_set', 'number_of_sets'))
 
     tiff = C(XPDTIFFPlugin, 'TIFF1:',
-             write_path_template='E:\\pe2_data\\%Y\\%m\\%d\\',
+             write_path_template='E:\\pe2_img\\%Y\\%m\\%d\\',
              read_path_template='/direct/XF28ID2/pe2_data/%Y/%m/%d/',
              cam_name='cam',  # used to configure "tiff squashing"
              proc_name='proc',  # ditto
@@ -287,15 +309,20 @@ class PerkinElmerContinuous(ContinuousAcquisitionTrigger, XPDPerkinElmer):
 class PerkinElmerStandard(SingleTrigger, XPDPerkinElmer):
     pass
 
-class PerkinElmerStandard4k(SingleTrigger, XPDPerkinElmer4k):
-    pass
-
-
 class PerkinElmerMulti(MultiTrigger, XPDPerkinElmer):
     shutter = C(EpicsSignal, 'XF:28IDC-ES:1{Sh:Exp}Cmd-Cmd')
 
+class PerkinElmerContinuous4k(ContinuousAcquisitionTrigger, XPDPerkinElmer4k):
+    pass
 
-'''
+class PerkinElmerStandard4k(SingleTrigger, XPDPerkinElmer4k):
+    pass
+
+class PerkinElmerMulti4k(MultiTrigger, XPDPerkinElmer4k):
+    shutter = C(EpicsSignal, 'XF:28IDC-ES:1{Sh:Exp}Cmd-Cmd')
+
+
+
 pe1 = PerkinElmerStandard('XF:28IDC-ES:1{Det:PE1}', name='pe1', read_attrs=['tiff'])
 
 
@@ -307,11 +334,17 @@ pe1c = PerkinElmerContinuous('XF:28IDC-ES:1{Det:PE1}', name='pe1',
                              read_attrs=['tiff', 'stats1.total'],
                              plugin_name='tiff')
 
-'''
  
-pe2 = PerkinElmerStandard('XF:28IDC-ES:1{Det:PE2}', name='pe2',
+pe2 = PerkinElmerStandard4k('XF:28IDC-ES:1{Det:PE2}', name='pe2',
                              read_attrs=['tiff'])
-pe2.tiff.write_path_template='E:\\pe2_img\\%Y\\%m\\%d\\'
+
+pe2m = PerkinElmerMulti4k('XF:28IDC-ES:1{Det:PE2}', name='pe2', read_attrs=['tiff'],
+                        trigger_cycle=[[('image', {shctl1: 1}),
+                                        ('dark_image', {shctl1: 0})]])
+
+pe2c = PerkinElmerContinuous4k('XF:28IDC-ES:1{Det:PE2}', name='pe2',
+                             read_attrs=['tiff', 'stats1.total'],
+                             plugin_name='tiff')
 
 # some defaults, as an example of how to use this
 # pe1.configure(dict(images_per_set=6, number_of_sets=10))
