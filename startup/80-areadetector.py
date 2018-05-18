@@ -1,4 +1,5 @@
 import time as ttime
+from copy import deepcopy
 from ophyd.areadetector import (PerkinElmerDetector, ImagePlugin,
                                 TIFFPlugin, StatsPlugin, HDF5Plugin,
                                 ProcessPlugin, ROIPlugin)
@@ -31,12 +32,11 @@ def _ensure_trailing_slash(path):
 ophyd.areadetector.filestore_mixins._ensure_trailing_slash = _ensure_trailing_slash
 
 
-
-
 # from shutter import sh1
 
 #shctl1 = EpicsSignal('XF:28IDC-ES:1{Det:PE1}cam1:ShutterMode', name='shctl1')
 shctl1 = EpicsMotor('XF:28IDC-ES:1{Sh2:Exp-Ax:5}Mtr', name='shctl1')
+
 
 
 class XPDShutter(Device):
@@ -128,16 +128,9 @@ def take_dark(cam, light_field, dark_field_name):
     df_sig.stashed_datakey = desc[light_field]
 
 
-
-
-from copy import deepcopy
-FileStoreTIFFSquashing4k = deepcopy(FileStoreTIFFSquashing)
-FileStoreTIFFSquashing4k.write_path_template = None
-
 class XPDTIFFPlugin(TIFFPlugin, FileStoreTIFFSquashing,
                     FileStoreIterativeWrite):
     pass
-
 
 
 class XPDHDF5Plugin(HDF5Plugin, FileStoreHDF5IterativeWrite):
@@ -150,8 +143,8 @@ class XPDPerkinElmer(PerkinElmerDetector):
         PerkinElmerDetector._default_configuration_attrs +
         ('images_per_set', 'number_of_sets'))
     tiff = C(XPDTIFFPlugin, 'TIFF1:',
-             write_path_template='G:/pe1_data/%Y/%m/%d/',
-             read_path_template='/nsls2/xf28id2/pe1_data/%Y/%m/%d/',
+             write_path_template='/a/b/c/',
+             read_path_template='/a/b/c',
              cam_name='cam',  # used to configure "tiff squashing"
              proc_name='proc',  # ditto
              read_attrs=[],
@@ -186,55 +179,7 @@ class XPDPerkinElmer(PerkinElmerDetector):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.stage_sigs.update([(self.cam.trigger_mode, 'Internal'),
-                               ])
-
-class XPDPerkinElmer4k(PerkinElmerDetector):
-    image = C(ImagePlugin, 'image1:')
-    _default_configuration_attrs = (
-        PerkinElmerDetector._default_configuration_attrs +
-        ('images_per_set', 'number_of_sets'))
-
-    tiff = C(XPDTIFFPlugin, 'TIFF1:',
-             write_path_template='G:\\pe2_data\\%Y\\%m\\%d\\',
-             read_path_template='/nsls2/xf28id2/pe2_data/%Y/%m/%d/',
-             cam_name='cam',  # used to configure "tiff squashing"
-             proc_name='proc',  # ditto
-             read_attrs=[],
-             root='/nsls2/xf28id2/',
-             reg=db.reg)
-
-    # hdf5 = C(XPDHDF5Plugin, 'HDF1:',
-    #          write_path_template='G:/pe1_data/%Y/%m/%d/',
-    #          read_path_template='/direct/XF28ID2/pe1_data/%Y/%m/%d/',
-    #          root='/direct/XF28ID2/', reg=db.reg)
-
-    proc = C(ProcessPlugin, 'Proc1:')
-
-    # These attributes together replace `num_images`. They control
-    # summing images before they are stored by the detector (a.k.a. "tiff
-    # squashing").
-    images_per_set = C(Signal, value=1, add_prefix=())
-    number_of_sets = C(Signal, value=1, add_prefix=())
-
-    stats1 = C(StatsPlugin, 'Stats1:')
-    stats2 = C(StatsPlugin, 'Stats2:')
-    stats3 = C(StatsPlugin, 'Stats3:')
-    stats4 = C(StatsPlugin, 'Stats4:')
-    stats5 = C(StatsPlugin, 'Stats5:')
-
-    roi1 = C(ROIPlugin, 'ROI1:')
-    roi2 = C(ROIPlugin, 'ROI2:')
-    roi3 = C(ROIPlugin, 'ROI3:')
-    roi4 = C(ROIPlugin, 'ROI4:')
-
-    # dark_image = C(SavedImageSignal, None)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.stage_sigs.update([(self.cam.trigger_mode, 'Internal'),
-                               ])
-
+        self.stage_sigs.update([(self.cam.trigger_mode, 'Internal')])
 
 
 class ContinuousAcquisitionTrigger(BlueskyInterface):
@@ -305,46 +250,56 @@ class ContinuousAcquisitionTrigger(BlueskyInterface):
 class PerkinElmerContinuous(ContinuousAcquisitionTrigger, XPDPerkinElmer):
     pass
 
-
 class PerkinElmerStandard(SingleTrigger, XPDPerkinElmer):
     pass
 
 class PerkinElmerMulti(MultiTrigger, XPDPerkinElmer):
     shutter = C(EpicsSignal, 'XF:28IDC-ES:1{Sh:Exp}Cmd-Cmd')
 
-class PerkinElmerContinuous4k(ContinuousAcquisitionTrigger, XPDPerkinElmer4k):
-    pass
 
-class PerkinElmerStandard4k(SingleTrigger, XPDPerkinElmer4k):
-    pass
-
-class PerkinElmerMulti4k(MultiTrigger, XPDPerkinElmer4k):
-    shutter = C(EpicsSignal, 'XF:28IDC-ES:1{Sh:Exp}Cmd-Cmd')
+# PE1/2/3 PV prefixes in one place:
+pe1_pv_prefix = 'XF:28IDC-ES:1{Det:PE1}'
+pe2_pv_prefix = 'XF:28IDC-ES:1{Det:PE2}'
+pe3_pv_prefix = 'XF:28IDD-ES:2{Det:PE3}'
 
 
+# PE1 detector configurations:
 
-pe1 = PerkinElmerStandard('XF:28IDC-ES:1{Det:PE1}', name='pe1', read_attrs=['tiff'])
-
-
-pe1m = PerkinElmerMulti('XF:28IDC-ES:1{Det:PE1}', name='pe1', read_attrs=['tiff'],
+pe1 = PerkinElmerStandard(pe1_pv_prefix, name='pe1', read_attrs=['tiff'])
+pe1m = PerkinElmerMulti(pe1_pv_prefix, name='pe1', read_attrs=['tiff'],
                         trigger_cycle=[[('image', {shctl1: 1}),
                                         ('dark_image', {shctl1: 0})]])
-
-pe1c = PerkinElmerContinuous('XF:28IDC-ES:1{Det:PE1}', name='pe1',
+pe1c = PerkinElmerContinuous(pe1_pv_prefix, name='pe1',
                              read_attrs=['tiff', 'stats1.total'],
                              plugin_name='tiff')
 
- 
-pe2 = PerkinElmerStandard4k('XF:28IDC-ES:1{Det:PE2}', name='pe2',
-                             read_attrs=['tiff'])
-
-pe2m = PerkinElmerMulti4k('XF:28IDC-ES:1{Det:PE2}', name='pe2', read_attrs=['tiff'],
+# PE2 detector configurations:
+pe2 = PerkinElmerStandard(pe2_pv_prefix, name='pe2', read_attrs=['tiff'])
+pe2m = PerkinElmerMulti(pe2_pv_prefix, name='pe2', read_attrs=['tiff'],
                         trigger_cycle=[[('image', {shctl1: 1}),
                                         ('dark_image', {shctl1: 0})]])
-
-pe2c = PerkinElmerContinuous4k('XF:28IDC-ES:1{Det:PE2}', name='pe2',
+pe2c = PerkinElmerContinuous(pe2_pv_prefix, name='pe2',
                              read_attrs=['tiff', 'stats1.total'],
                              plugin_name='tiff')
+
+# PE2 detector configurations:
+pe3 = PerkinElmerStandard(pe3_pv_prefix, name='pe3', read_attrs=['tiff'])
+pe3m = PerkinElmerMulti(pe3_pv_prefix, name='pe3', read_attrs=['tiff'],
+                        trigger_cycle=[[('image', {shctl1: 1}),
+                                        ('dark_image', {shctl1: 0})]])
+pe3c = PerkinElmerContinuous(pe3_pv_prefix, name='pe3',
+                             read_attrs=['tiff', 'stats1.total'],
+                             plugin_name='tiff')
+
+
+# Update read/write paths for all the detectors in once:
+for det in [pe1, pe1m, pe1c,
+            pe2, pe2m, pe2c,
+            pe3, pe3m, pe3c,
+            ]:
+    det.tiff.read_path_template = f'/nsls2/xf28id2/{det.name}_data/%Y/%m/%d/'
+    det.tiff.write_path_template = f'G:\\{det.name}_data\\%Y\\%m\\%d\\'
+
 
 # some defaults, as an example of how to use this
 # pe1.configure(dict(images_per_set=6, number_of_sets=10))
