@@ -261,7 +261,7 @@ pe1_pv_prefix = 'XF:28IDC-ES:1{Det:PE1}'
 pe2_pv_prefix = 'XF:28IDC-ES:1{Det:PE2}'
 pe3_pv_prefix = 'XF:28IDD-ES:2{Det:PE3}'
 
-'''
+
 # PE1 detector configurations:
 pe1 = PerkinElmerStandard(pe1_pv_prefix, name='pe1', read_attrs=['tiff'])
 pe1m = PerkinElmerMulti(pe1_pv_prefix, name='pe1', read_attrs=['tiff'],
@@ -270,7 +270,7 @@ pe1m = PerkinElmerMulti(pe1_pv_prefix, name='pe1', read_attrs=['tiff'],
 pe1c = PerkinElmerContinuous(pe1_pv_prefix, name='pe1',
                              read_attrs=['tiff', 'stats1.total'],
                              plugin_name='tiff')
-'''
+
 # PE2 detector configurations:
 pe2 = PerkinElmerStandard(pe2_pv_prefix, name='pe2', read_attrs=['tiff'])
 pe2m = PerkinElmerMulti(pe2_pv_prefix, name='pe2', read_attrs=['tiff'],
@@ -292,7 +292,7 @@ pe3c = PerkinElmerContinuous(pe3_pv_prefix, name='pe3',
 
 # Update read/write paths for all the detectors in once:
 for det in [
-            # pe1, pe1m, pe1c,
+            pe1, pe1m, pe1c,
             pe2, pe2m, pe2c,
             pe3, pe3m, pe3c,
             ]:
