@@ -10,11 +10,6 @@ nslsii.configure_base(get_ipython().user_ns, 'xpd', pbar=True, bec=True,
 # IMPORTANT : This is needed to read old data
 db.reg.set_root_map({'/direct/XF28ID1':'/direct/XF28ID2'})
 
-
-# Optional: set any metadata that rarely changes.
-# RE.md['beamline_id'] = 'YOUR_BEAMLINE_HERE'
-
-
 # At the end of every run, verify that files were saved and
 # print a confirmation message.
 from bluesky.callbacks.broker import verify_files_saved, post_run

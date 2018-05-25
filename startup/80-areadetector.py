@@ -148,13 +148,12 @@ class XPDPerkinElmer(PerkinElmerDetector):
              cam_name='cam',  # used to configure "tiff squashing"
              proc_name='proc',  # ditto
              read_attrs=[],
-             root='/nsls2/xf28id2/',
-             reg=db.reg)
+             root='/nsls2/xf28id2/')
 
     # hdf5 = C(XPDHDF5Plugin, 'HDF1:',
     #          write_path_template='G:/pe1_data/%Y/%m/%d/',
     #          read_path_template='/direct/XF28ID2/pe1_data/%Y/%m/%d/',
-    #          root='/direct/XF28ID2/', reg=db.reg)
+    #          root='/direct/XF28ID2/')
 
     proc = C(ProcessPlugin, 'Proc1:')
 
