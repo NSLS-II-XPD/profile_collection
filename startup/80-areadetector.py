@@ -23,10 +23,10 @@ def _ensure_trailing_slash(path):
     setpoint filepath to match the readback filepath, we need to add the
     trailing slash ourselves.
     """
-    newpath =  os.path.join(path, '')
-    if newpath[0] != '/':
+    newpath = os.path.join(path, '')
+    if newpath[0] != '/' and newpath[-1] == '/':
         # make it a windows slash
-        newpath[-1] = "\\"
+        newpath = newpath[:-1]
     return newpath
 
 ophyd.areadetector.filestore_mixins._ensure_trailing_slash = _ensure_trailing_slash
@@ -264,7 +264,6 @@ pe3_pv_prefix = 'XF:28IDD-ES:2{Det:PE3}'
 
 
 # PE1 detector configurations:
-
 pe1 = PerkinElmerStandard(pe1_pv_prefix, name='pe1', read_attrs=['tiff'])
 pe1m = PerkinElmerMulti(pe1_pv_prefix, name='pe1', read_attrs=['tiff'],
                         trigger_cycle=[[('image', {shctl1: 1}),
@@ -293,7 +292,8 @@ pe3c = PerkinElmerContinuous(pe3_pv_prefix, name='pe3',
 
 
 # Update read/write paths for all the detectors in once:
-for det in [pe1, pe1m, pe1c,
+for det in [
+            pe1, pe1m, pe1c,
             pe2, pe2m, pe2c,
             pe3, pe3m, pe3c,
             ]:
