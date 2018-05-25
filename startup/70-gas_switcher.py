@@ -1,6 +1,5 @@
 from ophyd import EpicsSignalRO, Device
 from ophyd import Component as Cpt, DerivedSignal
-from bluesky.examples import NullStatus
 
 
 class GasSignal(DerivedSignal):

@@ -5,7 +5,7 @@ import nslsii
 # this command takes away much of the boilerplate for settting up a profile
 # (such as setting up best effort callbacks etc)
 nslsii.configure_base(get_ipython().user_ns, 'xpd', pbar=True, bec=True,
-                      magics=True, mpl=True, epics_context=True)
+                      magics=True, mpl=True, epics_context=False)
 
 # IMPORTANT : This is needed to read old data
 db.reg.set_root_map({'/direct/XF28ID1':'/direct/XF28ID2'})
