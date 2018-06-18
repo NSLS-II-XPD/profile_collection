@@ -262,7 +262,11 @@ pe2_pv_prefix = 'XF:28IDC-ES:1{Det:PE2}'
 pe3_pv_prefix = 'XF:28IDD-ES:2{Det:PE3}'
 
 
+# DAMA(mrakitin, 20180618): Commenting out pe1-related definitions
+# since there are some issues with GPFS, but they need to run
+# scans with pe3 having pe1 disabled.
 # PE1 detector configurations:
+"""
 pe1 = PerkinElmerStandard(pe1_pv_prefix, name='pe1', read_attrs=['tiff'])
 pe1m = PerkinElmerMulti(pe1_pv_prefix, name='pe1', read_attrs=['tiff'],
                         trigger_cycle=[[('image', {shctl1: 1}),
@@ -270,6 +274,8 @@ pe1m = PerkinElmerMulti(pe1_pv_prefix, name='pe1', read_attrs=['tiff'],
 pe1c = PerkinElmerContinuous(pe1_pv_prefix, name='pe1',
                              read_attrs=['tiff', 'stats1.total'],
                              plugin_name='tiff')
+"""
+
 """
 # PE2 detector configurations:
 pe2 = PerkinElmerStandard(pe2_pv_prefix, name='pe2', read_attrs=['tiff'])
@@ -294,14 +300,12 @@ pe3c = PerkinElmerContinuous(pe3_pv_prefix, name='pe3',
 
 # Update read/write paths for all the detectors in once:
 for det in [
-            pe1, pe1m, pe1c,
-            #pe2, pe2m, pe2c,
+            # pe1, pe1m, pe1c,
+            # pe2, pe2m, pe2c,
             pe3, pe3m, pe3c,
             ]:
     det.tiff.read_path_template = f'/nsls2/xf28id2/{det.name}_data/%Y/%m/%d/'
     det.tiff.write_path_template = f'G:\\{det.name}_data\\%Y\\%m\\%d\\'
-    #det.tiff.write_path_template = f'C:\\tmp\\'
-
 
 # some defaults, as an example of how to use this
 # pe1.configure(dict(images_per_set=6, number_of_sets=10))
