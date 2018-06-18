@@ -22,7 +22,9 @@ class Robot(Device):
     # Map sample types to their load position and measurement position.
     TH_POS = {'capillary': {'load': None, 'measure': None},
               'plate': {'load': 0, 'measure': 90},
-              None: {'load': None, 'measure': None}}
+              # Dirty aweful horrible hack revert ASAP
+              # Dirty hack, do a relative move from 0 to 90
+              None: {'load': 49.7, 'measure': 139.7}}
 
     DIFF_POS = {'capilary': (1,2),}
 
