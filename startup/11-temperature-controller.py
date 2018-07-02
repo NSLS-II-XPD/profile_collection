@@ -113,11 +113,10 @@ cryostat = CryoStat('XF:28IDC_ES1:LS335:{CryoStat}', name='cryostat', dead_band=
 # TODO : PV needs to be fixed for done signal
 # (doesn't work on ramp down)
 class LinkamFurnace(PVPositioner):
-    readback = C(EpicsSignalRO, 'RAMP:LIMIT:SET.VAL')
+    readback = C(EpicsSignalRO, 'TEMP')
     setpoint = C(EpicsSignal, 'RAMP:LIMIT:SET')
     done = C(EpicsSignalRO, 'STATUS')
     stop_signal = C(EpicsSignal, 'RAMP:CTRL:SET')
-    temperature = C(EpicsSignal, "TEMP")
 
     def set(self, *args, timeout=None, **kwargs):
         return super().set(*args, timeout=timeout, **kwargs)
