@@ -4,11 +4,11 @@ import nslsii
 # See docstring for nslsii.configure_base() for more details
 # this command takes away much of the boilerplate for settting up a profile
 # (such as setting up best effort callbacks etc)
-nslsii.configure_base(get_ipython().user_ns, 'xpd', pbar=True, bec=True,
+nslsii.configure_base(get_ipython().user_ns, 'xpdd', pbar=True, bec=True,
                       magics=True, mpl=True, epics_context=False)
 
 # IMPORTANT : This is needed to read old data
-db.reg.set_root_map({'/direct/XF28ID1':'/direct/XF28ID2'})
+# db.reg.set_root_map({'/direct/XF28ID1':'/direct/XF28ID2'})
 
 # At the end of every run, verify that files were saved and
 # print a confirmation message.
@@ -24,7 +24,7 @@ from bluesky.callbacks.broker import verify_files_saved, post_run
 
 RE.md['facility'] = 'NSLS-II'
 RE.md['group'] = 'XPD'
-RE.md['beamline_id'] = '28-ID-2'
+RE.md['beamline_id'] = '28-ID-D'
 
 import subprocess
 
