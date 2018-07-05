@@ -131,8 +131,8 @@ class LinkamFurnace(PVPositioner):
 
 # To allow for sample temperature equilibration time, increase
 # the `settle_time` parameter (units: seconds).
-linkam_furnace = LinkamFurnace('XF:28IDC-ES:2:{LINKAM}:', name='cs700',
-                                   settle_time=0)
+linkam_furnace = LinkamFurnace('XF:28IDC-ES:2:{LINKAM}:',
+                               name='linkam_furnace', settle_time=0)
 linkam_furnace.done_value = 3
 linkam_furnace.stop_value = 0
 linkam_furnace.setpoint.kind = "normal"
