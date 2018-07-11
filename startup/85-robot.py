@@ -24,7 +24,7 @@ class Robot(Device):
               'plate': {'load': 0, 'measure': 90},
               # Dirty aweful horrible hack revert ASAP
               # Dirty hack, do a relative move from 0 to 90
-              None: {'load': 49.7, 'measure': 139.7}}
+              None: {'load': -40.3, 'measure': 49.7}}
 
     DIFF_POS = {'capilary': (1,2),}
 
