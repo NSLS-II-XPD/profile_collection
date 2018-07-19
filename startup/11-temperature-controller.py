@@ -119,25 +119,11 @@ class LinkamFurnace(PVPositioner):
     stop_signal = C(EpicsSignal, 'RAMP:CTRL:SET')
     ramp_rate = C(EpicsSignal, 'RAMP:RATE:SET')
 
-    def set(self, *args, timeout=None, **kwargs):
-        return super().set(*args, timeout=timeout, **kwargs)
-
-    def stage(self):
-        # This moves the rampe state to 'start' when staging the
-        # the controller.
-        self.stop_signal = 1
-        status = DeviceStatus(self)
-        status._finished()
-        return status
-
-    def unstage(self):
-        # This moves the rampe state to 'start' when staging the
-        # the controller.
-        self.stop_signal = 2
-        status = DeviceStatus(self)
-        status._finished()
-        return status
-
+    def set(self, new_position, *args, timeout=None, **kwargs):
+        if abs(new_position - self.setpoint.value) < 1:
+            return DeviceStatus(self, done=True, success=True)
+        else:
+            return super().set(new_position, *args, timeout=timeout, **kwargs)
 
     def trigger(self):
         # There is nothing to do. Just report that we are done.
@@ -152,7 +138,7 @@ class LinkamFurnace(PVPositioner):
 linkam_furnace = LinkamFurnace('XF:28IDC-ES:2:{LINKAM}:',
                                name='linkam_furnace', settle_time=0)
 linkam_furnace.done_value = 3
-linkam_furnace.stop_value = 2
+linkam_furnace.stop_value = 1
 linkam_furnace.setpoint.kind = "normal"
 linkam_furnace.readback.kind = "normal"
 linkam_furnace.readback.name = 'temperature'
