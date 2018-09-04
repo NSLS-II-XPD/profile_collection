@@ -22,11 +22,10 @@ class Robot(Device):
     # Map sample types to their load position and measurement position.
     TH_POS = {'capillary': {'load': None, 'measure': None},
               'plate': {'load': 0, 'measure': 90},
-              # Dirty aweful horrible hack revert ASAP
-              # Dirty hack, do a relative move from 0 to 90
-              None: {'load': -40.3, 'measure': 49.7}}
+              None: {'load': None, 'measure': None}, }
+    REL_MOVES = ['plate']
 
-    DIFF_POS = {'capilary': (1,2),}
+    DIFF_POS = {'capilary': (1, 2), }
 
     def __init__(self, *args, theta, diff=None, **kwargs):
         """
@@ -52,13 +51,15 @@ class Robot(Device):
         # If no sample is loaded, current_sample_number=0
         # is reported by the robot.
         if self.current_sample_number.get() != 0:
-            raise RuntimeError("Sample %d is already loaded." % self.current_sample_number.get())
+            raise RuntimeError(
+                "Sample %d is already loaded." % self.current_sample_number.get())
 
         # Rotate theta into loading position if necessary (e.g. flat plate mode).
         load_pos = self.TH_POS[sample_geometry]['load']
         if load_pos is not None:
-            print('Moving theta to load position')
-            self.theta.move(load_pos, wait=True)
+            if sample_geometry not in self.REL_MOVES:
+                print('Moving theta to load position')
+                self.theta.move(load_pos, wait=True)
 
         # Loading the sample is a three-step procedure:
         # Set sample_number; issue load_cmd; issue execute_cmd.
@@ -72,7 +73,11 @@ class Robot(Device):
         measure_pos = self.TH_POS[sample_geometry]['measure']
         if measure_pos is not None:
             print('Moving theta to measure position')
-            self.theta.move(measure_pos, wait=True)
+            if sample_geometry not in self.REL_MOVES:
+                self.theta.move(measure_pos, wait=True)
+            else:
+                pos = self.theta.get()
+                self.theta.move(pos + measure_pos, wait=True)
 
         # Stash the current sample geometry for reference when we unload.
         self._current_sample_geometry = sample_geometry
@@ -84,6 +89,14 @@ class Robot(Device):
 
         # Rotate theta into loading position if necessary (e.g. flat plate mode).
         load_pos = self.TH_POS[self._current_sample_geometry]['load']
+        measure_pos = self.TH_POS[self._current_sample_geometry]['measure']
+        if load_pos is not None:
+            print('Moving theta to measure position')
+            if self._current_sample_geometry not in self.REL_MOVES:
+                self.theta.move(load_pos, wait=True)
+            else:
+                pos = self.theta.get()
+                self.theta.move(pos - measure_pos, wait=True)
         if load_pos is not None:
             print('Moving theta to unload position')
             self.theta.move(load_pos, wait=True)
@@ -98,8 +111,6 @@ class Robot(Device):
     def stop(self):
         self.theta.stop()
         super().stop()
-
-
 
 
 # Define custom commands for sample loading/unloading.
@@ -124,7 +135,9 @@ RE.register_command('unload_sample', _unload_sample)
 
 def load_sample(position, geometry=None):
     # TODO: I think this can be simpler.
-    return (yield from single_gen(Msg('load_sample', robot, position, geometry)))
+    return (
+        yield from single_gen(Msg('load_sample', robot, position, geometry)))
+
 
 def unload_sample():
     # TODO: I think this can be simpler.
@@ -175,7 +188,7 @@ def tseries(sample, exposure, num):
     pe1c.images_per_set.put(num)
     pe1c.number_of_sets.put(exposure // num)
     plan = subs_wrapper(count([pe1c], num=1), LiveTable([]))
-    i# plan = robot_wrapper(plan, sample)
+    i  # plan = robot_wrapper(plan, sample)
     yield from plan
 
 
@@ -189,6 +202,7 @@ def Tramp(sample, exposure, start, stop, step):
 # Define list of sample info.
 samples = [{'position': 1, 'geometry': 'capillary', 'sample_name': 'stuff'},
            {'position': 2, 'geometry': 'plate', 'sample_name': 'other_stuff'}]
+
 
 def example():
     for sample in samples:
