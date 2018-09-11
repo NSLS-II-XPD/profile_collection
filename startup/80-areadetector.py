@@ -141,7 +141,7 @@ class XPDPerkinElmer(PerkinElmerDetector):
     image = C(ImagePlugin, 'image1:')
     _default_configuration_attrs = (
         PerkinElmerDetector._default_configuration_attrs +
-        ('images_per_set', 'number_of_sets'))
+        ('images_per_set', 'number_of_sets', 'pixel_size'))
     tiff = C(XPDTIFFPlugin, 'TIFF1:',
              write_path_template='/a/b/c/',
              read_path_template='/a/b/c',
@@ -163,6 +163,7 @@ class XPDPerkinElmer(PerkinElmerDetector):
     images_per_set = C(Signal, value=1, add_prefix=())
     number_of_sets = C(Signal, value=1, add_prefix=())
 
+    pixel_size = C(Signal, value=.0002, kind='config')
     stats1 = C(StatsPlugin, 'Stats1:')
     stats2 = C(StatsPlugin, 'Stats2:')
     stats3 = C(StatsPlugin, 'Stats3:')
@@ -301,6 +302,8 @@ for det in [
             ]:
     det.tiff.read_path_template = f'/nsls2/xf28id2/{det.name}_data/%Y/%m/%d/'
     det.tiff.write_path_template = f'G:\\{det.name}_data\\%Y\\%m\\%d\\'
-
+    det.cam.bin_x.kind = 'config'
+    det.cam.bin_y.kind = 'config'
+    
 # some defaults, as an example of how to use this
 # pe1.configure(dict(images_per_set=6, number_of_sets=10))
