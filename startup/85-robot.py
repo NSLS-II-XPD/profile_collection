@@ -11,6 +11,9 @@ from bluesky.callbacks import LiveTable
 from bluesky import Msg
 
 
+SAMPLE_GEOMETRY_NULL = '~~NULL_GEO~~'
+
+
 class Robot(Device):
     sample_number = Cpt(EpicsSignal, 'ID:Tgt-SP')
     load_cmd = Cpt(EpicsSignal, 'Cmd:Load-Cmd.PROC')
@@ -35,7 +38,7 @@ class Robot(Device):
         diff : motor, optional [not currently used]
         """
         self.theta = theta
-        self._current_sample_geometry = None
+        self._current_sample_geometry = SAMPLE_GEOMETRY_NULL
         super().__init__(*args, **kwargs)
 
     def _poll_until_idle(self):
@@ -76,7 +79,7 @@ class Robot(Device):
             if sample_geometry not in self.REL_MOVES:
                 self.theta.move(measure_pos, wait=True)
             else:
-                pos = self.theta.get()
+                pos = self.theta.get().user_readback
                 self.theta.move(pos + measure_pos, wait=True)
 
         # Stash the current sample geometry for reference when we unload.
@@ -87,26 +90,26 @@ class Robot(Device):
             # there is nothing to do
             return
 
-        # Rotate theta into loading position if necessary (e.g. flat plate mode).
+        # Rotate theta into loading position if necessary (e.g. flat plate mode)
+        if self._current_sample_geometry == SAMPLE_GEOMETRY_NULL:
+            raise RuntimeError("Unknown current sample geometry, can not unload")
         load_pos = self.TH_POS[self._current_sample_geometry]['load']
         measure_pos = self.TH_POS[self._current_sample_geometry]['measure']
+        print(load_pos, measure_pos)
         if load_pos is not None:
-            print('Moving theta to measure position')
+            print('Moving theta to unload position')
             if self._current_sample_geometry not in self.REL_MOVES:
                 self.theta.move(load_pos, wait=True)
             else:
-                pos = self.theta.get()
+                pos = self.theta.get().user_readback
                 self.theta.move(pos - measure_pos, wait=True)
-        if load_pos is not None:
-            print('Moving theta to unload position')
-            self.theta.move(load_pos, wait=True)
 
         set_and_wait(self.unload_cmd, 1)
         self.execute_cmd.put(1)
         print('Unloading...')
         self._poll_until_idle()
         self._poll_until_sample_cleared()
-        self._current_sample_geometry = None
+        self._current_sample_geometry = SAMPLE_GEOMETRY_NULL
 
     def stop(self):
         self.theta.stop()
