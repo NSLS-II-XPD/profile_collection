@@ -38,9 +38,9 @@ def Gas_Plan(gas_in = 'He', liveplot_key=None, totExpTime = 5, num_exp = 1, dela
     ----------
     >> %run -i /home/xf28id1/Documents/Sanjit/Scripts/GasXrun_Plan.py
     >> change all the parameters inside Gas_Plan as required
-    >>> gas_plan = Gas_Plan(gas_in = 'He', liveplot_key= 'rga_mass1', totExpTime = 5, num_exp = 3, delay = 1) 
+    >>> gas_plan = Gas_Plan(gas_in = 'He', liveplot_key= 'rga_mass1', totExpTime = 5, num_exp = 3, delay = 1)
     >> to run the xrun, save metadata & save_tiff run the following
-    >>> run_and_save(sample_num = 0)   
+    >>> run_and_save(sample_num = 0)  
     """
 
 
@@ -51,13 +51,13 @@ def Gas_Plan(gas_in = 'He', liveplot_key=None, totExpTime = 5, num_exp = 1, dela
     _configure_area_det(totExpTime)   # 5 secs exposuretime
 
     ## ScanPlan you need
-    plan = bp.count([pe1c, gas.current_gas, rga], num=num_exp, delay= delay)     
+    plan = bp.count([pe1c, gas.current_gas, rga], num=num_exp, delay= delay)    
 
     #plan = bp.subs_wrapper(plan, LiveTable([xpd_configuration['area_det'], rga]))   # give you LiveTable
-    plan = bp.subs_wrapper(plan, LiveTable([xpd_configuration['area_det'], gas.current_gas, rga]))   
+    plan = bp.subs_wrapper(plan, LiveTable([xpd_configuration['area_det'], gas.current_gas, rga]))  
     if liveplot_key and isinstance(liveplot_key, str):
         plan =  bp.subs_wrapper(plan, LivePlot(liveplot_key))
-      
+     
     yield from plan
 '''
 def run_and_save(sample_num = 0, folder_tag = ''):
@@ -71,8 +71,8 @@ def run_and_save(sample_num = 0):
     xrun(sample_num, gas_plan, folder_tag = 'RT-des')
     h = db[-1]
     tb = h.table()
-    tb.to_csv(path_or_buf =file_name, columns = ['time', 'gas_current_gas', 'rga_mass1', 
-                              'rga_mass2', 'rga_mass3', 'rga_mass4', 'rga_mass5', 
+    tb.to_csv(path_or_buf =file_name, columns = ['time', 'gas_current_gas', 'rga_mass1',
+                              'rga_mass2', 'rga_mass3', 'rga_mass4', 'rga_mass5',
                               'rga_mass6', 'rga_mass7', 'rga_mass8', 'rga_mass9'])
 
     integrate_and_save_last()
