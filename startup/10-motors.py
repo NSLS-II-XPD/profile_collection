@@ -15,6 +15,9 @@ ss_stg2_x = EpicsMotor('XF:28IDC-ES:1{Stg:Smpl2-Ax:X}Mtr', name='ss_stg2_x')
 ss_stg2_y = EpicsMotor('XF:28IDC-ES:1{Stg:Smpl2-Ax:Y}Mtr', name='ss_stg2_y')
 ss_stg2_z = EpicsMotor('XF:28IDC-ES:1{Stg:Smpl2-Ax:Z}Mtr', name='ss_stg2_z')
 
+# long travel sample stage 
+sample_x = EpicsMotor('XF:28IDC-ES:1{SampArray-Ax:X}Mtr', name='sample_x')
+
 # RPI DIFFRACTOMETER motors ### Change th only after changing in other plans
 th = EpicsMotor('XF:28IDC-ES:1{Dif:1-Ax:Th}Mtr', name='th')
 tth = EpicsMotor('XF:28IDC-ES:1{Dif:1-Ax:2ThI}Mtr', name='tth')
