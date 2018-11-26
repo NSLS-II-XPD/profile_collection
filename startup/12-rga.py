@@ -2,38 +2,18 @@
 from ophyd import Device, Component as Cpt
 
 
-class EpicsSignalOverridePrecRO(EpicsSignalRO):
-    def __init__(self, *args, precision=10, **kwargs):
-        self._precision = precision
-        super().__init__(*args, **kwargs)
-
-    @property
-    def precision(self):
-        return self._precision
-
-
-class EpicsSignalOverridePrec(EpicsSignal):
-    def __init__(self, *args, precision=10, **kwargs):
-        self._precision = precision
-        super().__init__(*args, **kwargs)
-
-    @property
-    def precision(self):
-        return self._precision
-
-
 class RGA(Device):
     startRGA = Cpt(EpicsSignal, 'Cmd:MID_Start-Cmd')
     stopRGA = Cpt(EpicsSignal, 'Cmd:ScanAbort-Cmd')
-    mass1 = Cpt(EpicsSignalOverridePrecRO, 'P:MID1-I')
-    mass2 = Cpt(EpicsSignalOverridePrecRO, 'P:MID2-I')
-    mass3 = Cpt(EpicsSignalOverridePrecRO, 'P:MID3-I')
-    mass4 = Cpt(EpicsSignalOverridePrecRO, 'P:MID4-I')
-    mass5 = Cpt(EpicsSignalOverridePrecRO, 'P:MID5-I')
-    mass6 = Cpt(EpicsSignalOverridePrecRO, 'P:MID6-I')
-    mass7 = Cpt(EpicsSignalOverridePrecRO, 'P:MID7-I')
-    mass8 = Cpt(EpicsSignalOverridePrecRO, 'P:MID8-I')
-    mass9 = Cpt(EpicsSignalOverridePrecRO, 'P:MID9-I')
+    mass1 = Cpt(EpicsSignalRO, 'P:MID1-I')
+    mass2 = Cpt(EpicsSignalRO, 'P:MID2-I')
+    mass3 = Cpt(EpicsSignalRO, 'P:MID3-I')
+    mass4 = Cpt(EpicsSignalRO, 'P:MID4-I')
+    mass5 = Cpt(EpicsSignalRO, 'P:MID5-I')
+    mass6 = Cpt(EpicsSignalRO, 'P:MID6-I')
+    mass7 = Cpt(EpicsSignalRO, 'P:MID7-I')
+    mass8 = Cpt(EpicsSignalRO, 'P:MID8-I')
+    mass9 = Cpt(EpicsSignalRO, 'P:MID9-I')
 
 ## We don't want the RGA to start and stop by any bluseky plan###
 
