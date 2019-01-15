@@ -5,6 +5,7 @@ from ophyd.areadetector import (PerkinElmerDetector, ImagePlugin,
                                 ProcessPlugin, ROIPlugin)
 from ophyd.device import BlueskyInterface
 from ophyd.areadetector.trigger_mixins import SingleTrigger, MultiTrigger
+from nslsii.ad33 import SingleTriggerV33, StatsPluginV33
 from ophyd.areadetector.filestore_mixins import (FileStoreIterativeWrite,
                                                  FileStoreHDF5IterativeWrite,
                                                  FileStoreTIFFSquashing,
@@ -164,11 +165,11 @@ class XPDPerkinElmer(PerkinElmerDetector):
     number_of_sets = C(Signal, value=1, add_prefix=())
 
     pixel_size = C(Signal, value=.0002, kind='config')
-    stats1 = C(StatsPlugin, 'Stats1:')
-    stats2 = C(StatsPlugin, 'Stats2:')
-    stats3 = C(StatsPlugin, 'Stats3:')
-    stats4 = C(StatsPlugin, 'Stats4:')
-    stats5 = C(StatsPlugin, 'Stats5:')
+    stats1 = C(StatsPluginV33, 'Stats1:')
+    stats2 = C(StatsPluginV33, 'Stats2:')
+    stats3 = C(StatsPluginV33, 'Stats3:')
+    stats4 = C(StatsPluginV33, 'Stats4:')
+    stats5 = C(StatsPluginV33, 'Stats5:')
 
     roi1 = C(ROIPlugin, 'ROI1:')
     roi2 = C(ROIPlugin, 'ROI2:')
@@ -253,6 +254,9 @@ class PerkinElmerContinuous(ContinuousAcquisitionTrigger, XPDPerkinElmer):
 class PerkinElmerStandard(SingleTrigger, XPDPerkinElmer):
     pass
 
+class PerkinElmerStandardV33(SingleTriggerV33, XPDPerkinElmer):
+    pass
+
 class PerkinElmerMulti(MultiTrigger, XPDPerkinElmer):
     shutter = C(EpicsSignal, 'XF:28IDC-ES:1{Sh:Exp}Cmd-Cmd')
 
@@ -265,7 +269,7 @@ pe3_pv_prefix = 'XF:28IDD-ES:2{Det:PE3}'
 
 # PE1 detector configurations:
 
-pe1 = PerkinElmerStandard(pe1_pv_prefix, name='pe1', read_attrs=['tiff'])
+pe1 = PerkinElmerStandardV33(pe1_pv_prefix, name='pe1', read_attrs=['tiff'])
 pe1m = PerkinElmerMulti(pe1_pv_prefix, name='pe1', read_attrs=['tiff'],
                         trigger_cycle=[[('image', {shctl1: 1}),
                                         ('dark_image', {shctl1: 0})]])
@@ -275,7 +279,7 @@ pe1c = PerkinElmerContinuous(pe1_pv_prefix, name='pe1',
 
 
 # PE2 detector configurations:
-pe2 = PerkinElmerStandard(pe2_pv_prefix, name='pe2', read_attrs=['tiff'])
+pe2 = PerkinElmerStandardV33(pe2_pv_prefix, name='pe2', read_attrs=['tiff'])
 pe2m = PerkinElmerMulti(pe2_pv_prefix, name='pe2', read_attrs=['tiff'],
                         trigger_cycle=[[('image', {shctl1: 1}),
                                         ('dark_image', {shctl1: 0})]])
@@ -285,7 +289,7 @@ pe2c = PerkinElmerContinuous(pe2_pv_prefix, name='pe2',
 
 
 # PE2 detector configurations:
-pe3 = PerkinElmerStandard(pe3_pv_prefix, name='pe3', read_attrs=['tiff'])
+pe3 = PerkinElmerStandardV33(pe3_pv_prefix, name='pe3', read_attrs=['tiff'])
 pe3m = PerkinElmerMulti(pe3_pv_prefix, name='pe3', read_attrs=['tiff'],
                         trigger_cycle=[[('image', {shctl1: 1}),
                                         ('dark_image', {shctl1: 0})]])
