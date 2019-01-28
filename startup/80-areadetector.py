@@ -169,7 +169,8 @@ class XPDPerkinElmer(PerkinElmerDetector):
     stats2 = C(StatsPluginV33, 'Stats2:')
     stats3 = C(StatsPluginV33, 'Stats3:')
     stats4 = C(StatsPluginV33, 'Stats4:')
-    stats5 = C(StatsPluginV33, 'Stats5:')
+    stats5 = C(StatsPluginV33, 'Stats5:', kind = 'hinted')
+    stats5.total.kind = 'hinted'
 
     roi1 = C(ROIPlugin, 'ROI1:')
     roi2 = C(ROIPlugin, 'ROI2:')
