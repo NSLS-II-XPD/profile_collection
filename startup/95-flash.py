@@ -2,6 +2,15 @@ from ophyd import (Device,
                    Component as Cpt,
                    EpicsSignal, EpicsSignalRO)
 
+class CurrentSetterEpicSignal(EpicsSignal):
+    def stop(self):
+        self.parent.enabled.put(0)
+
+
+class CurrentEnable(EpicsSignal):
+    def stop(self):
+        self.put(0)
+
 
 class FlashRampInternals(Device):
     next_sp = Cpt(EpicsSignalRO, 'I:Next-SP')
@@ -16,26 +25,29 @@ class FlashPower(Device):
     current = Cpt(EpicsSignalRO, 'I-I', kind='hinted')
     voltage = Cpt(EpicsSignalRO, 'E-I', kind='hinted')
 
-    current_sp = Cpt(EpicsSignal,
+    current_sp = Cpt(CurrentSetterEpicSignal,
                      'I:OutMain-RB',
                      'I-Lim')
     voltage_sp = Cpt(EpicsSignal,
                      'E:OutMain-RB',
                      'E:OutMain-SP')
 
-    enabled = Cpt(EpicsSignal,
+    enabled = Cpt(CurrentEnable,
                   'Enbl:OutMain-Sts',
                   'Enbl:OutMain-Cmd',
-                  kind='omitted')
+                  kind='omitted',
+                  string=True)
 
     remote_lockout = Cpt(EpicsSignal,
                          'Enbl:Lock-Sts',
                          'Enbl:Lock-Cmd',
+                         string=True,
                          kind='config')
 
     foldback_mode = Cpt(EpicsSignal,
                         'Mode:Fold-Sts',
                         'Mode:Fold-Sel',
+                        string=True,
                         kind='config')
 
     over_volt_val = Cpt(EpicsSignal,
@@ -60,6 +72,7 @@ class FlashPower(Device):
                 kind='config')
 
     mode = Cpt(EpicsSignal, 'UserMode-I',
+               string=True,
                kind='config')
 
     _internals = Cpt(FlashRampInternals, '')
