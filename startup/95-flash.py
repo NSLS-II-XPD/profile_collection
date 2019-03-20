@@ -76,3 +76,12 @@ class FlashPower(Device):
 
 flash_power = FlashPower('XF:28ID2-ES{PSU:SRS}',
                          name='flash_power')
+
+
+class KeithlyMM(Device):
+    current = Cpt(Signal)
+    volatge = Cpt(Signal)
+
+
+MM = KeithlyMM(name='MM')
+
