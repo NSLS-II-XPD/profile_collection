@@ -94,19 +94,55 @@ class FlashPower(Device):
         self.enabled.put(0)
 
 
+class KeithlyMMChannel(Device):
+    chanafunc = Cpt(EpicsSignal, "ChanAFunc")
+    chanaresults = Cpt(EpicsSignal, "ChanAResults")
+    chanatimes = Cpt(EpicsSignal, "ChanATimes")
+    chanaenable = Cpt(EpicsSignal, "ChanAEnable")
+
+    chanbfunc = Cpt(EpicsSignal, "ChanBFunc")
+    chanbresults = Cpt(EpicsSignal, "ChanBResults")
+    chanbtimes = Cpt(EpicsSignal, "ChanBTimes")
+    chanbenable = Cpt(EpicsSignal, "ChanBEnable")
+
+
+class KeithlyMM(Device):
+    # these are the ones documented in the readme
+    readtype = Cpt(EpicsSignal, "ReadType", kind='config')
+    # the readme says you get one or the other which seems odd?
+    readcurr = Cpt(EpicsSignal, "ReadCurr", kind='hinted')
+    readvolt = Cpt(EpicsSignal, "ReadVolt", kind='hinted')
+
+    synctype = Cpt(EpicsSignal, "SyncType", kind='config')
+
+    # other records in db file, not sure what to do with
+    test = Cpt(EpicsSignal, "test", kind='omitted')
+
+    timetotal = Cpt(EpicsSignal, "TimeTotal", kind='omitted')
+
+    # this looks like a way to buffer in device?
+    scaninterval = Cpt(EpicsSignal, "ScanInterval", kind='omitted')
+    numchannels = Cpt(EpicsSignal, "NumChannels", kind='omitted')
+    scancount = Cpt(EpicsSignal, "ScanCount", kind='omitted')
+
+    func = Cpt(EpicsSignal, "Func", kind='omitted')
+
+    # these seems important?
+    scanresults = Cpt(EpicsSignal, "ScanResults", kind='omitted')
+    timestamp = Cpt(EpicsSignal, "Timestamp", kind='omitted')
+    timestampfrac = Cpt(EpicsSignal, "TimestampFrac", kind='omitted')
+    timestampint = Cpt(EpicsSignal, "TimestampInt", kind='omitted')
+
+    readtypeseq = Cpt(EpicsSignal, "ReadTypeSeq", kind='omitted')
+
+
+MM = KeithlyMM('XF:28IDC-ES{KDMM6500}',
+               name='MM')
 flash_power = FlashPower('XF:28ID2-ES{PSU:SRS}',
                          name='flash_power')
 
 
-class KeithlyMM(Device):
-    current = Cpt(Signal)
-    volatge = Cpt(Signal)
-
-
-MM = KeithlyMM(name='MM')
-
-
-def flash_step_field(dets, VIT_table, md, *, delay=1):
+def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current'):
     all_dets = dets + [flash_power, MM]
     req_cols = ['I', 'V', 't']
     if not all(k in VIT_table for k in req_cols):
@@ -115,12 +151,21 @@ def flash_step_field(dets, VIT_table, md, *, delay=1):
     VIT_table = pd.DataFrame(VIT_table)
     # TODO put in default meta-data
 
+    yield from bps.mv(MM.readtype, mm_mode)
+    if mm_mode == 'Current':
+        monitor_during = [MM.readcurr]
+    elif mm_mode == 'Voltage':
+        monitor_during = [MM.readvolt]
+    else:
+        raise ValueError(f'you passed mm_mode={mm_mode} '
+                         'but the value must be one of '
+                         '{"Current", "Voltage"}')
     # paranoia to be very sure we turn the PSU off
     @finalize_decorator(bps.mov(flash_power.enabled, 0))
     # this arms the detectors
     @stage_decorator(all_dets)
     # this sets up the monitors of the multi-meter
-    @monitor_during_decorator([MM.current, MM.voltage])
+    @monitor_during_decorator(monitor_during)
     # this opens the run and puts the meta-data in it
     @run_decorator(md=md)
     def flash_step_field_inner():
