@@ -4,7 +4,9 @@ from ophyd import (Device,
 from bluesky.preprocessors import (
     run_decorator, stage_decorator, finalize_decorator,
     monitor_during_decorator)
+
 import bluesky.plan_stubs as bps
+from bluesky.utils import short_uid
 import pandas as pd
 import time
 
@@ -281,3 +283,96 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, md, *,
 
 
     return (yield from flash_ramp_inner())
+
+
+def sawtooth_factory(motor, start, stop, step_size):
+    """Generate a per-step function that move the motor in a sawtooth
+
+
+
+    It is assumed to be near the start on the first step where this is
+    called.
+
+    The motion will look like /|/|/|/|
+
+    Parameter
+    ---------
+    motor : setabble
+        The motor to move.
+
+    start, stop : float
+        The range to move the motor between
+
+    step_size : float
+        The size of steps to take between the measurements
+
+    Returns
+    -------
+    per_step : Callable[List[OphydObj]] -> None
+    """
+    if stop < start:
+        start, stop = stop, start
+
+    num_pos = int((stop - start) // step_size)
+    j = itertools.count()
+    last_group = None
+
+    def x_motion_per_step(dets):
+        nonlocal last_group
+        if last_group is not None:
+            yield from bps.wait(last_group)
+        yield from bps.trigger_and_read(dets)
+        last_group = short_uid()
+        target = start + step_size * (next(j) % num_pos)
+        yield from bps.abs_set(motor, target, group=last_group)
+
+    return x_motion_per_step
+
+
+def pyramid_factory(motor, start, stop, step_size):
+    """Generate a per-step function that moves the motor in triangle wave
+
+    It is assumed to be near the start on the first step where this is
+    called.
+
+    The motion will look like /\/\/\/\
+
+    Parameter
+    ---------
+    motor : setabble
+        The motor to move.
+
+    start, stop : float
+        The range to move the motor between
+
+    step_size : float
+        The size of steps to take between the measurements
+
+    Returns
+    -------
+    per_step : Callable[List[OphydObj]] -> None
+    """
+    if stop < start:
+        start, stop = stop, start
+    last_group = None
+    last_pos = start
+
+    def x_motion_per_step(dets):
+        nonlocal last_group
+        nonlocal last_pos
+        nonlocal step_size
+
+        if last_group is not None:
+            yield from bps.wait(last_group)
+
+        yield from bps.trigger_and_read(dets)
+
+        last_group = short_uid()
+
+        if not start < last_pos + step_size < stop:
+            step_size *= -1
+        last_pos += step_size
+
+        yield from bps.abs_set(motor, last_pos, group=last_group)
+
+    return x_motion_per_step
