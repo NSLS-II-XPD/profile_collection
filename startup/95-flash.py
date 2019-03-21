@@ -141,16 +141,7 @@ MM = KeithlyMM('XF:28IDC-ES{KDMM6500}',
 flash_power = FlashPower('XF:28ID2-ES{PSU:SRS}',
                          name='flash_power')
 
-
-def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current'):
-    all_dets = dets + [flash_power, MM]
-    req_cols = ['I', 'V', 't']
-    if not all(k in VIT_table for k in req_cols):
-        raise ValueError(f"input table must have {req_cols}")
-
-    VIT_table = pd.DataFrame(VIT_table)
-    # TODO put in default meta-data
-
+def _setup_mm(mm_mode):
     yield from bps.mv(MM.readtype, mm_mode)
     if mm_mode == 'Current':
         monitor_during = [MM.readcurr]
@@ -160,6 +151,21 @@ def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current'):
         raise ValueError(f'you passed mm_mode={mm_mode} '
                          'but the value must be one of '
                          '{"Current", "Voltage"}')
+
+    return monitor_during
+
+def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current'):
+    all_dets = dets + [flash_power]
+    req_cols = ['I', 'V', 't']
+    if not all(k in VIT_table for k in req_cols):
+        raise ValueError(f"input table must have {req_cols}")
+
+    monitor_during = yield from _setup_mm(mm_mode)
+
+    VIT_table = pd.DataFrame(VIT_table)
+    # TODO put in default meta-data
+
+
     # paranoia to be very sure we turn the PSU off
     @finalize_decorator(bps.mov(flash_power.enabled, 0))
     # this arms the detectors
@@ -174,8 +180,12 @@ def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current'):
                           flash_power.voltage_sp, 0)
         # put in "Duty Cycle" mode so current changes immediately
         yield from bps.mv(flash_power.mode, 'Duty Cycle')
+
+        # take a measurement on the way in
+        yield from bps.trigger_and_read(all_dets)
+
         # turn it on!
-        yield from bps.mv(flash_power.enabled, 0)
+        yield from bps.mv(flash_power.enabled, 1)
 
         for _, row in VIT_table.iterrows():
             tau = row['t']
@@ -186,8 +196,68 @@ def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current'):
             for j in range(exposure_count):
                 # this triggers the cameras, the PSU readings and the mm
                 yield from bps.trigger_and_read(all_dets)
+                # TODO account for acquisition time!
+                yield from bps.sleep(delay)
                 # if things get bogged down in data collection, bail early!
                 if time.monotonic() > deadline:
                     break
+        # turn it off!
+        # there are several other places we turn this off, but better safe
+        yield from bps.mv(flash_power.enabled, 0)
+
+        # take a measurement on the way in
+        yield from bps.trigger_and_read(all_dets)
 
     return (yield from flash_step_field_inner())
+
+
+def flash_ramp(dets, start_I, stop_I, ramp_rate, md, *,
+               delay=1, mm_mode='Current'):
+    start_V = 200
+    all_dets = dets + [flash_power, MM]
+    monitor_during = yield from _setup_mm(mm_mode)
+
+    expected_time = (stop_I - start_I) / ramp_rate
+    exposure_count = max(1, expected_time // delay)
+
+    # paranoia to be very sure we turn the PSU off
+    @finalize_decorator(bps.mov(flash_power.enabled, 0))
+    # this arms the detectors
+    @stage_decorator(all_dets)
+    # this sets up the monitors of the multi-meter
+    @monitor_during_decorator(monitor_during)
+    # this opens the run and puts the meta-data in it
+    @run_decorator(md=md)
+    def flash_step_field_inner():
+        # set everything to zero at the top
+        yield from bps.mv(flash_power.current_sp, 0,
+                          flash_power.voltage_sp, 0,
+                          flash_power.ramp_rate, ramp_rate)
+        # put in "Duty Cycle" mode so current changes immediately
+        yield from bps.mv(flash_power.mode, 'Duty Cycle')
+        # take one shot on the way in
+        yield from bps.trigger_and_read(all_dets)
+        # turn it on!
+        yield from bps.mv(flash_power.enabled, 1)
+
+        # TODO
+        # what voltage limit to start with ?!
+        yield from bps.mv(flash_power.current_sp, start_I,
+                          flash_power.voltage_sp, start_V)
+        # put in "Current Ramp" to start the ramp
+        yield from bps.mv(flash_power.mode, 'Duty Cycle')
+        # set the target to let it go
+        yield from bps.mv(flash_power.current_sp, start_I)
+
+        for j in range(exposure_count):
+            # this triggers the cameras, the PSU readings and the mm
+            yield from bps.trigger_and_read(all_dets)
+            # TODO account for acquisition time!
+            yield from bps.sleep(delay)
+
+        # take one shot on the way out
+        yield from bps.trigger_and_read(all_dets)
+
+        # turn it off!
+        # there are several other places we turn this off, but better safe
+        yield from bps.mv(flash_power.enabled, 0)
