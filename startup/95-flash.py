@@ -140,6 +140,7 @@ class KeithlyMM(Device):
 MM = KeithlyMM('XF:28IDC-ES{KDMM6500}', name='MM')
 flash_power = FlashPower('XF:28ID2-ES:1{PSU:SRS}', name='flash_power')
 
+
 def _setup_mm(mm_mode):
     yield from bps.mv(MM.readtype, mm_mode)
     if mm_mode == 'Current':
@@ -153,7 +154,33 @@ def _setup_mm(mm_mode):
 
     return monitor_during
 
-def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current', per_step=None):
+
+def _inner_loop(dets, exposure_count, delay, deadline, per_step):
+    if per_step is None:
+        pre_step = bps.trigger_and_read
+
+    for j in range(exposure_count):
+        start_time = time.monotonic()
+        # if things get bogged down in data collection, bail early!
+        if start_time > deadline:
+            break
+
+        # this triggers the cameras
+        yield from per_step(dets)
+
+        stop_time = time.monotonic()
+        # TODO account for acquisition time!
+        exp_actual = stop_time - start_time
+        sleep_time = delay - exp_actual
+        if stop_time + sleep_time > deadline:
+            yield from bps.sleep(deadline - stop_time)
+            return
+        else:
+            yield from bps.sleep(delay - exp_actual)
+
+
+def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current',
+                     per_step=None):
     all_dets = dets + [flash_power]
     req_cols = ['I', 'V', 't']
     if not all(k in VIT_table for k in req_cols):
@@ -163,7 +190,6 @@ def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current', per_ste
 
     VIT_table = pd.DataFrame(VIT_table)
     # TODO put in default meta-data
-
 
     # paranoia to be very sure we turn the PSU off
     @finalize_decorator(bps.mov(flash_power.enabled, 0))
@@ -192,26 +218,8 @@ def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current', per_ste
             yield from bps.mv(flash_power.current, row['I'],
                               flash_power.voltage, row['V'])
             deadline = time.monotonic() + tau
-            for j in range(exposure_count):
-                start_time = time.monotonic()                
-                # if things get bogged down in data collection, bail early!
-                if start_time > deadline:
-                    break
-                
-                # this triggers the cameras, the PSU readings and the mm
-                yield from bps.trigger_and_read(all_dets)
-                if per_set is not None:
-                    yield from per_step()
-                
-                stop_time = time.monotonic()
-                # TODO account for acquisition time!
-                exp_actual = stop_time - start_time
-                sleep_time = delay - exp_actual
-                if stop_time + sleep_time > deadline:
-                    yield from bps.sleep(deadline - stop_time)
-                    break
-                else:
-                    yield from bps.sleep(delay - exp_actual)
+            yield from _inner_loop(dets, exposure_count,
+                                   deadline, delay, per_step)
 
         # turn it off!
         # there are several other places we turn this off, but better safe
@@ -224,7 +232,7 @@ def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current', per_ste
 
 
 def flash_ramp(dets, start_I, stop_I, ramp_rate, md, *,
-               delay=1, mm_mode='Current'):
+               delay=1, mm_mode='Current', per_step=None):
     start_V = 200
     all_dets = dets + [flash_power, MM]
     monitor_during = yield from _setup_mm(mm_mode)
@@ -261,11 +269,9 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, md, *,
         # set the target to let it go
         yield from bps.mv(flash_power.current_sp, start_I)
 
-        for j in range(exposure_count):
-            # this triggers the cameras, the PSU readings and the mm
-            yield from bps.trigger_and_read(all_dets)
-            # TODO account for acquisition time!
-            yield from bps.sleep(delay)
+        yield from _inner_loop(dets, exposure_count,
+                               time.monotonic() + expected_time,
+                               delay, per_step)
 
         # take one shot on the way out
         yield from bps.trigger_and_read(all_dets)
