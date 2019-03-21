@@ -156,9 +156,6 @@ def _setup_mm(mm_mode):
 
 
 def _inner_loop(dets, exposure_count, delay, deadline, per_step):
-    if per_step is None:
-        per_step = bps.trigger_and_read
-
     for j in range(exposure_count):
         start_time = time.monotonic()
         # if things get bogged down in data collection, bail early!
@@ -180,7 +177,7 @@ def _inner_loop(dets, exposure_count, delay, deadline, per_step):
 
 
 def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current',
-                     per_step=None):
+                     per_step=bps.trigger_and_read):
     all_dets = dets + [flash_power]
     req_cols = ['I', 'V', 't']
     if not all(k in VIT_table for k in req_cols):
@@ -207,7 +204,7 @@ def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current',
         yield from bps.mv(flash_power.mode, 'Duty-Cycle')
 
         # take a measurement on the way in
-        yield from bps.trigger_and_read(all_dets)
+        yield from per_step(all_dets)
 
         # turn it on!
         yield from bps.mv(flash_power.enabled, 1)
@@ -226,13 +223,14 @@ def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current',
         yield from bps.mv(flash_power.enabled, 0)
 
         # take a measurement on the way in
-        yield from bps.trigger_and_read(all_dets)
+        yield from per_step(all_dets)
 
     return (yield from flash_step_field_inner())
 
 
 def flash_ramp(dets, start_I, stop_I, ramp_rate, md, *,
-               delay=1, mm_mode='Current', per_step=None):
+               delay=1, mm_mode='Current',
+               per_step=bps.trigger_and_read):
     start_V = 200
     all_dets = dets + [flash_power, MM]
     monitor_during = yield from _setup_mm(mm_mode)
@@ -256,7 +254,7 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, md, *,
         # put in "Duty Cycle" mode so current changes immediately
         yield from bps.mv(flash_power.mode, 'Duty-Cycle')
         # take one shot on the way in
-        yield from bps.trigger_and_read(all_dets)
+        yield from per_step(all_dets)
         # turn it on!
         yield from bps.mv(flash_power.enabled, 1)
 
@@ -274,7 +272,7 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, md, *,
                                delay, per_step)
 
         # take one shot on the way out
-        yield from bps.trigger_and_read(all_dets)
+        yield from per_step(all_dets)
 
         # turn it off!
         # there are several other places we turn this off, but better safe
