@@ -157,7 +157,7 @@ def _setup_mm(mm_mode):
 
 def _inner_loop(dets, exposure_count, delay, deadline, per_step):
     if per_step is None:
-        pre_step = bps.trigger_and_read
+        per_step = bps.trigger_and_read
 
     for j in range(exposure_count):
         start_time = time.monotonic()
