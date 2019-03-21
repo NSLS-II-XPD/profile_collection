@@ -160,6 +160,7 @@ def _inner_loop(dets, exposure_count, delay, deadline, per_step):
         start_time = time.monotonic()
         # if things get bogged down in data collection, bail early!
         if start_time > deadline:
+            print(f'{start_time} > {deadline} bail!')
             break
 
         # this triggers the cameras
@@ -189,7 +190,7 @@ def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current',
     # TODO put in default meta-data
 
     # paranoia to be very sure we turn the PSU off
-    @finalize_decorator(bps.mov(flash_power.enabled, 0))
+    @finalize_decorator(lambda : bps.mov(flash_power.enabled, 0))
     # this arms the detectors
     @stage_decorator(all_dets)
     # this sets up the monitors of the multi-meter
@@ -211,19 +212,20 @@ def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current',
 
         for _, row in VIT_table.iterrows():
             tau = row['t']
-            exposure_count = max(1, tau // delay)
+            exposure_count = int(max(1, tau // delay))
             yield from bps.mv(flash_power.current, row['I'],
                               flash_power.voltage, row['V'])
             deadline = time.monotonic() + tau
-            yield from _inner_loop(dets, exposure_count,
-                                   deadline, delay, per_step)
+            yield from _inner_loop(all_dets, exposure_count,
+                                   delay, deadline, per_step)
+
+        # take a measurement on the way out
+        yield from per_step(all_dets)
 
         # turn it off!
         # there are several other places we turn this off, but better safe
         yield from bps.mv(flash_power.enabled, 0)
 
-        # take a measurement on the way in
-        yield from per_step(all_dets)
 
     return (yield from flash_step_field_inner())
 
@@ -236,17 +238,16 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, md, *,
     monitor_during = yield from _setup_mm(mm_mode)
 
     expected_time = (stop_I - start_I) / ramp_rate
-    exposure_count = max(1, expected_time // delay)
-
+    exposure_count = int(max(1, expected_time // delay))
     # paranoia to be very sure we turn the PSU off
-    @finalize_decorator(bps.mov(flash_power.enabled, 0))
+    @finalize_decorator(lambda : bps.mov(flash_power.enabled, 0))
     # this arms the detectors
     @stage_decorator(all_dets)
     # this sets up the monitors of the multi-meter
     @monitor_during_decorator(monitor_during)
     # this opens the run and puts the meta-data in it
     @run_decorator(md=md)
-    def flash_step_field_inner():
+    def flash_ramp_inner():
         # set everything to zero at the top
         yield from bps.mv(flash_power.current_sp, 0,
                           flash_power.voltage_sp, 0,
@@ -263,13 +264,13 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, md, *,
         yield from bps.mv(flash_power.current_sp, start_I,
                           flash_power.voltage_sp, start_V)
         # put in "Current Ramp" to start the ramp
-        yield from bps.mv(flash_power.mode, 'Duty-Cycle')
+        yield from bps.mv(flash_power.mode, 'Current Ramp')
         # set the target to let it go
-        yield from bps.mv(flash_power.current_sp, start_I)
+        yield from bps.mv(flash_power.current_sp, stop_I)
 
-        yield from _inner_loop(dets, exposure_count,
+        yield from _inner_loop(all_dets, exposure_count, delay,
                                time.monotonic() + expected_time,
-                               delay, per_step)
+                               per_step)
 
         # take one shot on the way out
         yield from per_step(all_dets)
@@ -277,3 +278,6 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, md, *,
         # turn it off!
         # there are several other places we turn this off, but better safe
         yield from bps.mv(flash_power.enabled, 0)
+
+
+    return (yield from flash_ramp_inner())
