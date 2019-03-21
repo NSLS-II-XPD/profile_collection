@@ -34,32 +34,32 @@ class FlashPower(Device):
 
     current_sp = Cpt(CurrentSetterEpicSignal,
                      'I:OutMain-RB',
-                     'I-Lim')
+                     write_pv='I-Lim')
     voltage_sp = Cpt(EpicsSignal,
                      'E:OutMain-RB',
-                     'E:OutMain-SP')
+                     write_pv='E:OutMain-SP')
 
     enabled = Cpt(CurrentEnable,
                   'Enbl:OutMain-Sts',
-                  'Enbl:OutMain-Cmd',
+                  write_pv='Enbl:OutMain-Cmd',
                   kind='omitted',
                   string=True)
 
     remote_lockout = Cpt(EpicsSignal,
                          'Enbl:Lock-Sts',
-                         'Enbl:Lock-Cmd',
+                         write_pv='Enbl:Lock-Cmd',
                          string=True,
                          kind='config')
 
     foldback_mode = Cpt(EpicsSignal,
                         'Mode:Fold-Sts',
-                        'Mode:Fold-Sel',
+                        write_pv='Mode:Fold-Sel',
                         string=True,
                         kind='config')
 
     over_volt_val = Cpt(EpicsSignal,
                         'E:OverProt-RB',
-                        'E:OverProt-SP',
+                        write_pv='E:OverProt-SP',
                         kind='config')
 
     protection_reset = Cpt(
@@ -71,7 +71,7 @@ class FlashPower(Device):
     # stuff from ramp_rate.db
     ramp_rate = Cpt(EpicsSignal,
                     'I-RampRate-RB',
-                    'I-RampRate-I',
+                    write_pv='I-RampRate-I',
                     kind='config')
 
     delta = Cpt(EpicsSignalRO,
@@ -82,7 +82,7 @@ class FlashPower(Device):
                string=True,
                kind='config')
 
-    _internals = Cpt(FlashRampInternals, '')
+    _internals = Cpt(FlashRampInternals, '', kind='omitted')
 
     def unstage(self):
         ret = super().unstage()
@@ -108,7 +108,8 @@ class KeithlyMMChannel(Device):
 
 class KeithlyMM(Device):
     # these are the ones documented in the readme
-    readtype = Cpt(EpicsSignal, "ReadType", kind='config')
+    readtype = Cpt(EpicsSignal, "ReadType", kind='config',
+                   string=True)
     # the readme says you get one or the other which seems odd?
     readcurr = Cpt(EpicsSignal, "ReadCurr", kind='hinted')
     readvolt = Cpt(EpicsSignal, "ReadVolt", kind='hinted')
@@ -136,10 +137,8 @@ class KeithlyMM(Device):
     readtypeseq = Cpt(EpicsSignal, "ReadTypeSeq", kind='omitted')
 
 
-MM = KeithlyMM('XF:28IDC-ES{KDMM6500}',
-               name='MM')
-flash_power = FlashPower('XF:28ID2-ES{PSU:SRS}',
-                         name='flash_power')
+MM = KeithlyMM('XF:28IDC-ES{KDMM6500}', name='MM')
+flash_power = FlashPower('XF:28ID2-ES:1{PSU:SRS}', name='flash_power')
 
 def _setup_mm(mm_mode):
     yield from bps.mv(MM.readtype, mm_mode)
@@ -154,7 +153,7 @@ def _setup_mm(mm_mode):
 
     return monitor_during
 
-def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current'):
+def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current', per_step=None):
     all_dets = dets + [flash_power]
     req_cols = ['I', 'V', 't']
     if not all(k in VIT_table for k in req_cols):
@@ -179,7 +178,7 @@ def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current'):
         yield from bps.mv(flash_power.current_sp, 0,
                           flash_power.voltage_sp, 0)
         # put in "Duty Cycle" mode so current changes immediately
-        yield from bps.mv(flash_power.mode, 'Duty Cycle')
+        yield from bps.mv(flash_power.mode, 'Duty-Cycle')
 
         # take a measurement on the way in
         yield from bps.trigger_and_read(all_dets)
@@ -194,13 +193,26 @@ def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current'):
                               flash_power.voltage, row['V'])
             deadline = time.monotonic() + tau
             for j in range(exposure_count):
+                start_time = time.monotonic()                
+                # if things get bogged down in data collection, bail early!
+                if start_time > deadline:
+                    break
+                
                 # this triggers the cameras, the PSU readings and the mm
                 yield from bps.trigger_and_read(all_dets)
+                if per_set is not None:
+                    yield from per_step()
+                
+                stop_time = time.monotonic()
                 # TODO account for acquisition time!
-                yield from bps.sleep(delay)
-                # if things get bogged down in data collection, bail early!
-                if time.monotonic() > deadline:
+                exp_actual = stop_time - start_time
+                sleep_time = delay - exp_actual
+                if stop_time + sleep_time > deadline:
+                    yield from bps.sleep(deadline - stop_time)
                     break
+                else:
+                    yield from bps.sleep(delay - exp_actual)
+
         # turn it off!
         # there are several other places we turn this off, but better safe
         yield from bps.mv(flash_power.enabled, 0)
@@ -234,7 +246,7 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, md, *,
                           flash_power.voltage_sp, 0,
                           flash_power.ramp_rate, ramp_rate)
         # put in "Duty Cycle" mode so current changes immediately
-        yield from bps.mv(flash_power.mode, 'Duty Cycle')
+        yield from bps.mv(flash_power.mode, 'Duty-Cycle')
         # take one shot on the way in
         yield from bps.trigger_and_read(all_dets)
         # turn it on!
@@ -245,7 +257,7 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, md, *,
         yield from bps.mv(flash_power.current_sp, start_I,
                           flash_power.voltage_sp, start_V)
         # put in "Current Ramp" to start the ramp
-        yield from bps.mv(flash_power.mode, 'Duty Cycle')
+        yield from bps.mv(flash_power.mode, 'Duty-Cycle')
         # set the target to let it go
         yield from bps.mv(flash_power.current_sp, start_I)
 
