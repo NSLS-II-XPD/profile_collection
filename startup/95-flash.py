@@ -10,15 +10,16 @@ from bluesky.utils import short_uid
 import pandas as pd
 import time
 import itertools
+from bluesky.preprocessors import subs_decorator
 
 
 class CurrentSetterEpicSignal(EpicsSignal):
-    def stop(self):
+    def stop(self, success=False):
         self.parent.enabled.put(0)
 
 
 class CurrentEnable(EpicsSignal):
-    def stop(self):
+    def stop(self, success=False):
         self.put(0)
 
 
@@ -36,7 +37,7 @@ class FlashPower(Device):
     voltage = Cpt(EpicsSignalRO, 'E-I', kind='hinted')
 
     current_sp = Cpt(CurrentSetterEpicSignal,
-                     'I:OutMain-RB',
+                     'I:OutMain-SP',
                      write_pv='I-Lim')
     voltage_sp = Cpt(EpicsSignal,
                      'E:OutMain-RB',
@@ -92,7 +93,7 @@ class FlashPower(Device):
         self.enabled.put(0)
         return ret
 
-    def stop(self):
+    def stop(self, success=False):
         # for safety
         self.enabled.put(0)
 
@@ -142,6 +143,15 @@ class KeithlyMM(Device):
 
 MM = KeithlyMM('XF:28IDC-ES{KDMM6500}', name='MM')
 flash_power = FlashPower('XF:28ID2-ES:1{PSU:SRS}', name='flash_power')
+
+[setattr(getattr(flash_power._internals, n), 'kind', 'hinted') for n in flash_power._internals.component_names]
+[setattr(getattr(flash_power._internals, n), 'name', n) for n in flash_power._internals.component_names]
+flash_power._internals.kind = 'omitted'
+
+flash_power._internals.scheduler.kind = 'omitted'
+flash_power.current.name = 'I'
+flash_power.voltage.name = 'V'
+flash_power.current_sp.name = 'Isp'
 
 
 def _setup_mm(mm_mode):
@@ -212,8 +222,8 @@ def _inner_loop(dets, exposure_count, delay, deadline, per_step,
             yield from bps.sleep(delay - exp_actual)
 
 
-def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current',
-                     per_step=bps.trigger_and_read):
+def flash_step(dets, VIT_table, md, *, delay=1, mm_mode='Current',
+               per_step=bps.trigger_and_read):
     """
     Run a step-series of current/voltage.
 
@@ -256,7 +266,14 @@ def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current',
 
     VIT_table = pd.DataFrame(VIT_table)
     # TODO put in default meta-data
+    md.setdefault('hints', {})
+    md['hints'].setdefault('dimensions', [(('time',), 'primary')])
+    md['plan_name'] = 'flash_step'
+    md['plan_args'] = {'VIT_table': {k: v.values for k,v in VIT_table.items()},
+                       'delay': delay}
+                       
 
+    @subs_decorator(bec)
     # paranoia to be very sure we turn the PSU off
     @finalize_decorator(lambda: bps.mov(flash_power.enabled, 0))
     # this arms the detectors
@@ -278,11 +295,20 @@ def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current',
         # turn it on!
         yield from bps.mv(flash_power.enabled, 1)
 
+        last_I = last_V = np.nan
         for _, row in VIT_table.iterrows():
             tau = row['t']
             exposure_count = int(max(1, tau // delay))
-            yield from bps.mv(flash_power.current, row['I'],
-                              flash_power.voltage, row['V'])
+            yield from per_step(all_dets, 'primary')
+            next_I = row['I']
+            next_V = row['V']
+            if next_I != last_I:
+                yield from bps.mv(flash_power.current_sp, next_I)
+                last_I = next_I
+            if next_V != last_V:
+                yield from bps.mv(flash_power.voltage_sp, next_V)
+                last_V = next_V                
+
             deadline = time.monotonic() + tau
             yield from _inner_loop(all_dets, exposure_count,
                                    delay, deadline, per_step,
@@ -319,7 +345,7 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
     ramp_rate : float
         The rate of current change.
 
-        In Amps/s
+        In mA/min
 
     voltage : float
         The voltage limit through the current ramp.
@@ -339,12 +365,25 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
         If the plan take longer than *delay* to run it will
         immediately be restarted.
     """
-    all_dets = dets + [flash_power, MM]
+    if stop_I < start_I:
+        raise ValueError("IOC can not ramp backwards")
+    fudge_factor = 7
+    ramp_rate *= fudge_factor
+    all_dets = dets + [flash_power]
     monitor_during = yield from _setup_mm(mm_mode)
 
-    expected_time = (stop_I - start_I) / ramp_rate
-    exposure_count = int(max(1, expected_time // delay))
+    expected_time = abs((stop_I - start_I) / (ramp_rate/(fudge_factor*60*1000)))
+    exposure_count = int(max(1,  expected_time // delay))
 
+    md.setdefault('hints', {})
+    md['hints'].setdefault('dimensions', [(('time',), 'primary')])
+    md['plan_name'] = 'flash_ramp'
+    md['plan_args'] = {'start_I': start_I, 'stop_I': stop_I,
+                       'ramp_rate': ramp_rate, 'voltage': voltage,
+                       'delay': delay}
+    
+
+    @subs_decorator(bec)
     # paranoia to be very sure we turn the PSU off
     @finalize_decorator(lambda: bps.mov(flash_power.enabled, 0))
     # this arms the detectors
@@ -370,21 +409,25 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
         yield from bps.mv(flash_power.current_sp, start_I,
                           flash_power.voltage_sp, voltage)
         # put in "Current Ramp" to start the ramp
-        yield from bps.mv(flash_power.mode, 'Current Ramp')
+        yield from bps.mv(flash_power.mode, 'Current Ramping')
         # set the target to let it go
-        yield from bps.mv(flash_power.current_sp, stop_I)
+        gid = short_uid()
+        yield from bps.abs_set(flash_power.current_sp, stop_I,
+                               group=gid)
+        yield from bps.mv(flash_power.voltage_sp, voltage)
+        
 
         yield from _inner_loop(all_dets, exposure_count, delay,
                                time.monotonic() + expected_time,
-                               per_step)
+                               per_step, 'primary')
 
         # take one shot on the way out
         yield from per_step(all_dets, 'primary')
-
+        yield from bps.wait(gid)
         # turn it off!
         # there are several other places we turn this off, but better safe
         yield from bps.mv(flash_power.enabled, 0)
-
+        
     return (yield from flash_ramp_inner())
 
 
