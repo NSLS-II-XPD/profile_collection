@@ -235,10 +235,47 @@ def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current',
     return (yield from flash_step_field_inner())
 
 
-def flash_ramp(dets, start_I, stop_I, ramp_rate, md, *,
+def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
                delay=1, mm_mode='Current',
                per_step=bps.trigger_and_read):
-    start_V = 200
+    """
+    Run a current ramp
+
+    The current profile will look something like: /|
+
+    Parameters
+    ----------
+    dets : List[OphydObj]
+        The detectors to trigger at each point
+
+    start_I, stop_I : float
+        The start and end points of the current ramp
+
+        In Amps
+
+    ramp_rate : float
+        The rate of current change.
+
+        In Amps/s
+
+    voltage : float
+        The voltage limit through the current ramp.
+
+    delay : float, optional
+        The time lag between subsequent data acquisition
+
+    mm_mode : {'Current', 'Voltage'}, optional
+        The thing to measure from the Keithly multimeter.
+
+    per_step : Callable[List[OphydObj], Optional[str]] -> Generator[Msg]
+        The inner-most data acquisition loop.
+
+        This plan will be repeated as many times as possible (with
+        the target *delay* between starting the plan.
+
+        If the plan take longer than *delay* to run it will
+        immediately be restarted.
+    """
     all_dets = dets + [flash_power, MM]
     monitor_during = yield from _setup_mm(mm_mode)
 
@@ -268,7 +305,7 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, md, *,
         # TODO
         # what voltage limit to start with ?!
         yield from bps.mv(flash_power.current_sp, start_I,
-                          flash_power.voltage_sp, start_V)
+                          flash_power.voltage_sp, voltage)
         # put in "Current Ramp" to start the ramp
         yield from bps.mv(flash_power.mode, 'Current Ramp')
         # set the target to let it go
