@@ -170,7 +170,6 @@ def _inner_loop(dets, exposure_count, delay, deadline, per_step):
         yield from per_step(dets, stream_name)
 
         stop_time = time.monotonic()
-        # TODO account for acquisition time!
         exp_actual = stop_time - start_time
         sleep_time = delay - exp_actual
         if stop_time + sleep_time > deadline:
@@ -193,7 +192,7 @@ def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current',
     # TODO put in default meta-data
 
     # paranoia to be very sure we turn the PSU off
-    @finalize_decorator(lambda : bps.mov(flash_power.enabled, 0))
+    @finalize_decorator(lambda: bps.mov(flash_power.enabled, 0))
     # this arms the detectors
     @stage_decorator(all_dets)
     # this sets up the monitors of the multi-meter
@@ -229,7 +228,6 @@ def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current',
         # there are several other places we turn this off, but better safe
         yield from bps.mv(flash_power.enabled, 0)
 
-
     return (yield from flash_step_field_inner())
 
 
@@ -242,8 +240,9 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, md, *,
 
     expected_time = (stop_I - start_I) / ramp_rate
     exposure_count = int(max(1, expected_time // delay))
+
     # paranoia to be very sure we turn the PSU off
-    @finalize_decorator(lambda : bps.mov(flash_power.enabled, 0))
+    @finalize_decorator(lambda: bps.mov(flash_power.enabled, 0))
     # this arms the detectors
     @stage_decorator(all_dets)
     # this sets up the monitors of the multi-meter
@@ -281,7 +280,6 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, md, *,
         # turn it off!
         # there are several other places we turn this off, but better safe
         yield from bps.mv(flash_power.enabled, 0)
-
 
     return (yield from flash_ramp_inner())
 
@@ -331,7 +329,7 @@ def sawtooth_factory(motor, start, stop, step_size):
 
 
 def pyramid_factory(motor, start, stop, step_size):
-    """Generate a per-step function that moves the motor in triangle wave
+    r"""Generate a per-step function that moves the motor in triangle wave
 
     It is assumed to be near the start on the first step where this is
     called.
