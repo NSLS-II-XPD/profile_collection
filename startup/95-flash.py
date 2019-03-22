@@ -166,7 +166,7 @@ def _inner_loop(dets, exposure_count, delay, deadline, per_step):
             break
 
         # this triggers the cameras
-        yield from per_step(dets)
+        yield from per_step(dets, stream_name)
 
         stop_time = time.monotonic()
         # TODO account for acquisition time!
@@ -317,11 +317,11 @@ def sawtooth_factory(motor, start, stop, step_size):
     j = itertools.count()
     last_group = None
 
-    def x_motion_per_step(dets):
+    def x_motion_per_step(dets, stream_name):
         nonlocal last_group
         if last_group is not None:
             yield from bps.wait(last_group)
-        yield from bps.trigger_and_read(dets)
+        yield from bps.trigger_and_read(dets, stream_name)
         last_group = short_uid()
         target = start + step_size * (next(j) % num_pos)
         yield from bps.abs_set(motor, target, group=last_group)
@@ -357,7 +357,7 @@ def pyramid_factory(motor, start, stop, step_size):
     last_group = None
     last_pos = start
 
-    def x_motion_per_step(dets):
+    def x_motion_per_step(dets, stream_name):
         nonlocal last_group
         nonlocal last_pos
         nonlocal step_size
@@ -365,7 +365,7 @@ def pyramid_factory(motor, start, stop, step_size):
         if last_group is not None:
             yield from bps.wait(last_group)
 
-        yield from bps.trigger_and_read(dets)
+        yield from bps.trigger_and_read(dets, stream_name)
 
         last_group = short_uid()
 
