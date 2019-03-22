@@ -158,7 +158,36 @@ def _setup_mm(mm_mode):
     return monitor_during
 
 
-def _inner_loop(dets, exposure_count, delay, deadline, per_step):
+def _inner_loop(dets, exposure_count, delay, deadline, per_step,
+                stream_name='primary'):
+    """Helper plan for the inner loop of the sinter plans
+
+    This is very much like the repeat plan, but has less
+    delay input types and more logic about finishing on a deadline.
+
+    Parameters
+    ----------
+    dets : List[OphydObj]
+        The detectors passed to per_step
+
+    exposure_count : int
+        The maximum number of times to call per_step
+
+    delay : float
+        The target delay between subsequent starts of per_step.
+
+    deadline : float
+         Wall time to be done by.  Under no condition take longer
+         than this to completely run through plan.
+
+    per_step : Callable[List[OphydObj], Optional[str]] -> Generator[Msg]
+        The plan to run 'per step'.
+
+        This is the signature of triger_and_read
+
+    primary : str, optional
+        Passed to per_step.  Defaults to 'primary'
+    """
     for j in range(exposure_count):
         start_time = time.monotonic()
 
@@ -185,6 +214,39 @@ def _inner_loop(dets, exposure_count, delay, deadline, per_step):
 
 def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current',
                      per_step=bps.trigger_and_read):
+    """
+    Run a step-series of current/voltage.
+
+    The current/voltage profile will look something like: ┌┐_┌┐_┌┐_
+
+    Parameters
+    ----------
+    dets : List[OphydObj]
+        The detectors to trigger at each point
+
+    VIT_table : pd.DataFrame
+       The required columns are {"I", "V", "t"} which are
+       the current, voltage, and hold time respectively.
+
+    md : dict
+        The metadata to put into the runstart.  Will have
+        some defaults added
+
+    delay : float, optional
+        The time lag between subsequent data acquisition
+
+    mm_mode : {'Current', 'Voltage'}, optional
+        The thing to measure from the Keithly multimeter.
+
+    per_step : Callable[List[OphydObj], Optional[str]] -> Generator[Msg]
+        The inner-most data acquisition loop.
+
+        This plan will be repeated as many times as possible (with
+        the target *delay* between starting the plan.
+
+        If the plan take longer than *delay* to run it will
+        immediately be restarted.
+    """
     all_dets = dets + [flash_power]
     req_cols = ['I', 'V', 't']
     if not all(k in VIT_table for k in req_cols):
