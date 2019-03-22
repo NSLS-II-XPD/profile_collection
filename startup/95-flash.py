@@ -411,7 +411,7 @@ def sawtooth_factory(motor, start, stop, step_size):
 
     Returns
     -------
-    per_step : Callable[List[OphydObj]] -> None
+    per_step : Callable[List[OphydObj], str] -> Generator[Msg]
     """
     if stop < start:
         start, stop = stop, start
@@ -453,7 +453,7 @@ def pyramid_factory(motor, start, stop, step_size):
 
     Returns
     -------
-    per_step : Callable[List[OphydObj]] -> None
+    per_step : Callable[List[OphydObj], str] -> Generator[Msg]
     """
     if stop < start:
         start, stop = stop, start
