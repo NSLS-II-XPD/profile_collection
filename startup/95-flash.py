@@ -159,7 +159,7 @@ def _setup_mm(mm_mode):
 
 
 def _inner_loop(dets, exposure_count, delay, deadline, per_step,
-                stream_name='primary'):
+                stream_name):
     """Helper plan for the inner loop of the sinter plans
 
     This is very much like the repeat plan, but has less
@@ -273,7 +273,7 @@ def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current',
         yield from bps.mv(flash_power.mode, 'Duty-Cycle')
 
         # take a measurement on the way in
-        yield from per_step(all_dets)
+        yield from per_step(all_dets, 'primary')
 
         # turn it on!
         yield from bps.mv(flash_power.enabled, 1)
@@ -285,10 +285,11 @@ def flash_step_field(dets, VIT_table, md, *, delay=1, mm_mode='Current',
                               flash_power.voltage, row['V'])
             deadline = time.monotonic() + tau
             yield from _inner_loop(all_dets, exposure_count,
-                                   delay, deadline, per_step)
+                                   delay, deadline, per_step,
+                                   'primary')
 
         # take a measurement on the way out
-        yield from per_step(all_dets)
+        yield from per_step(all_dets, 'primary')
 
         # turn it off!
         # there are several other places we turn this off, but better safe
@@ -360,7 +361,7 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
         # put in "Duty Cycle" mode so current changes immediately
         yield from bps.mv(flash_power.mode, 'Duty-Cycle')
         # take one shot on the way in
-        yield from per_step(all_dets)
+        yield from per_step(all_dets, 'primary')
         # turn it on!
         yield from bps.mv(flash_power.enabled, 1)
 
@@ -378,7 +379,7 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
                                per_step)
 
         # take one shot on the way out
-        yield from per_step(all_dets)
+        yield from per_step(all_dets, 'primary')
 
         # turn it off!
         # there are several other places we turn this off, but better safe
