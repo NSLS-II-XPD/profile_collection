@@ -9,6 +9,7 @@ import bluesky.plan_stubs as bps
 from bluesky.utils import short_uid
 import pandas as pd
 import time
+import itertools
 
 
 class CurrentSetterEpicSignal(EpicsSignal):
