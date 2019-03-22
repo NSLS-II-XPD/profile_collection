@@ -161,6 +161,8 @@ def _setup_mm(mm_mode):
 def _inner_loop(dets, exposure_count, delay, deadline, per_step):
     for j in range(exposure_count):
         start_time = time.monotonic()
+
+        yield from bps.checkpoint()
         # if things get bogged down in data collection, bail early!
         if start_time > deadline:
             print(f'{start_time} > {deadline} bail!')
@@ -172,6 +174,8 @@ def _inner_loop(dets, exposure_count, delay, deadline, per_step):
         stop_time = time.monotonic()
         exp_actual = stop_time - start_time
         sleep_time = delay - exp_actual
+
+        yield from bps.checkpoint()
         if stop_time + sleep_time > deadline:
             yield from bps.sleep(deadline - stop_time)
             return
