@@ -170,7 +170,7 @@ class XPDPerkinElmer(PerkinElmerDetector):
     stats3 = C(StatsPluginV33, 'Stats3:')
     stats4 = C(StatsPluginV33, 'Stats4:')
     stats5 = C(StatsPluginV33, 'Stats5:', kind = 'hinted')
-    stats5.total.kind = 'hinted'
+    #stats5.total.kind = 'hinted'
 
     roi1 = C(ROIPlugin, 'ROI1:')
     roi2 = C(ROIPlugin, 'ROI2:')
@@ -260,6 +260,28 @@ class PerkinElmerStandardV33(SingleTriggerV33, XPDPerkinElmer):
 
 class PerkinElmerMulti(MultiTrigger, XPDPerkinElmer):
     shutter = C(EpicsSignal, 'XF:28IDC-ES:1{Sh:Exp}Cmd-Cmd')
+
+class PerkinElmerContinuousStage(PerkinElmerContinuous):
+    stage_tries = 6
+    def stage(self):
+        for i in range(stage_tries):
+            try:
+                super().stage()
+            except TimeoutError as e:
+                if i == self.stage_tries-1:
+                    raise 
+                print(e)
+
+    def unstage(self):
+        for i in range(stage_tries):
+            try:
+                super().unstage()
+            except TimeoutError as e:
+                if i == self.stage_tries-1:
+                    raise
+                print(e)
+
+            
 
 
 # PE1/2/3 PV prefixes in one place:
