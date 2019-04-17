@@ -215,10 +215,14 @@ def _inner_loop(dets, exposure_count, delay, deadline, per_step,
         sleep_time = delay - exp_actual
 
         yield from bps.checkpoint()
+        print(f'sleep time {sleep_time}')
         if stop_time + sleep_time > deadline:
+            print(f'sleeping for: {deadline - stop_time}')
             yield from bps.sleep(deadline - stop_time)
+            print('finished final sleep, bouncing out')
             return
         else:
+            print(f'sleeping for: {delay - exp_actual}')
             yield from bps.sleep(delay - exp_actual)
 
 
@@ -299,24 +303,29 @@ def flash_step(dets, VIT_table, md, *, delay=1, mm_mode='Current',
         for _, row in VIT_table.iterrows():
             tau = row['t']
             exposure_count = int(max(1, tau // delay))
+            print('initial per step call')
             yield from per_step(all_dets, 'primary')
             next_I = row['I']
             next_V = row['V']
+            print('set IV')
             if next_I != last_I:
                 yield from bps.mv(flash_power.current_sp, next_I)
                 last_I = next_I
             if next_V != last_V:
                 yield from bps.mv(flash_power.voltage_sp, next_V)
                 last_V = next_V                
-
+            print('finsh setting IV')
             deadline = time.monotonic() + tau
             yield from _inner_loop(all_dets, exposure_count,
                                    delay, deadline, per_step,
                                    'primary')
+            print('finished inner loop call')
 
+        print('final shot')
         # take a measurement on the way out
         yield from per_step(all_dets, 'primary')
 
+        print('turning off')
         # turn it off!
         # there are several other places we turn this off, but better safe
         yield from bps.mv(flash_power.enabled, 0)
