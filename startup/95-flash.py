@@ -11,6 +11,24 @@ import pandas as pd
 import time
 import itertools
 from bluesky.preprocessors import subs_decorator
+#### Funtions for tseries type run with shuuter control and triggering other Ophyd Devices
+# from xpdacq.beamtime import _open_shutter_stub, _close_shutter_stub
+
+import bluesky.plans as bp
+import bluesky.plan_stubs as bps
+import bluesky.preprocessors as bpp
+
+def inner_shutter_control(msg):
+    if msg.command == "trigger":
+        def inner():
+            yield from _open_shutter_stub()
+            yield msg
+        return inner(), None
+    elif msg.command == "save":
+        return None, _close_shutter_stub()
+    else:
+        return None, None
+
 
 
 class CurrentSetterEpicSignal(EpicsSignal):
@@ -37,7 +55,7 @@ class FlashPower(Device):
     voltage = Cpt(EpicsSignalRO, 'E-I', kind='hinted')
 
     current_sp = Cpt(CurrentSetterEpicSignal,
-                     'I:OutMain-SP',
+                     'I-Lim',
                      write_pv='I-Lim')
     voltage_sp = Cpt(EpicsSignal,
                      'E:OutMain-RB',
@@ -329,8 +347,12 @@ def flash_step(dets, VIT_table, md, *, delay=1, mm_mode='Current',
         # turn it off!
         # there are several other places we turn this off, but better safe
         yield from bps.mv(flash_power.enabled, 0)
-
-    return (yield from flash_step_field_inner())
+        
+    if False:
+        return (yield from bpp.plan_mutator(
+                    flash_step_field_inner(), inner_shutter_control))
+    else:
+        return (yield from flash_step_field_inner())
 
 
 def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
@@ -349,7 +371,7 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
     start_I, stop_I : float
         The start and end points of the current ramp
 
-        In Amps
+        In mA
 
     ramp_rate : float
         The rate of current change.
@@ -374,6 +396,9 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
         If the plan take longer than *delay* to run it will
         immediately be restarted.
     """
+    # convert mA -> Ag
+    start_I = start_I *1000
+    stop_I = stop_I * 1000
     if stop_I < start_I:
         raise ValueError("IOC can not ramp backwards")
     fudge_factor = 7
