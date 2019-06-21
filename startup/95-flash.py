@@ -12,7 +12,7 @@ import time
 import itertools
 from bluesky.preprocessors import subs_decorator
 #### Funtions for tseries type run with shuuter control and triggering other Ophyd Devices
-# from xpdacq.beamtime import _open_shutter_stub, _close_shutter_stub
+from xpdacq.beamtime import open_shutter_stub, close_shutter_stub
 
 import bluesky.plans as bp
 import bluesky.plan_stubs as bps
@@ -21,11 +21,11 @@ import bluesky.preprocessors as bpp
 def inner_shutter_control(msg):
     if msg.command == "trigger":
         def inner():
-            yield from _open_shutter_stub()
+            yield from open_shutter_stub()
             yield msg
         return inner(), None
     elif msg.command == "save":
-        return None, _close_shutter_stub()
+        return None, close_shutter_stub()
     else:
         return None, None
 
@@ -49,6 +49,18 @@ class FlashRampInternals(Device):
     scheduler = Cpt(EpicsSignalRO, 'I:Scheduler')
 
 
+class FlakySignal(EpicsSignal):
+    def get(self, *args, **kwargs):
+        N = 5
+        for j in range(N):
+            v = super().get(*args, **kwargs)
+            if v is not None:
+                return v
+        else:
+            raise RuntimeError(
+                f"{self}.get got {N} None readings?!?")
+    
+
 class FlashPower(Device):
     # stuff from PSU sorensonxg850.template
     current = Cpt(EpicsSignalRO, 'I-I', kind='hinted')
@@ -57,9 +69,10 @@ class FlashPower(Device):
     current_sp = Cpt(CurrentSetterEpicSignal,
                      'I-Lim',
                      write_pv='I-Lim')
-    voltage_sp = Cpt(EpicsSignal,
+    voltage_sp = Cpt(FlakySignal,
                      'E:OutMain-RB',
-                     write_pv='E:OutMain-SP')
+                     write_pv='E:OutMain-SP',
+                     tolerance=.01)
 
     enabled = Cpt(CurrentEnable,
                   'Enbl:OutMain-Sts',
@@ -103,6 +116,10 @@ class FlashPower(Device):
     mode = Cpt(EpicsSignal, 'UserMode-I',
                string=True,
                kind='config')
+
+    ramp_done = Cpt(EpicsSignalRO,
+                    'CurrRamp-Done',
+                    kind='omitted')
 
     _internals = Cpt(FlashRampInternals, '', kind='omitted')
 
@@ -187,7 +204,7 @@ def _setup_mm(mm_mode):
 
 
 def _inner_loop(dets, exposure_count, delay, deadline, per_step,
-                stream_name):
+                stream_name, done_signal=None):
     """Helper plan for the inner loop of the sinter plans
 
     This is very much like the repeat plan, but has less
@@ -213,9 +230,25 @@ def _inner_loop(dets, exposure_count, delay, deadline, per_step,
 
         This is the signature of triger_and_read
 
-    primary : str, optional
-        Passed to per_step.  Defaults to 'primary'
+    primary : str
+        Passed to per_step
+
+    done_signal : Signal, optional
+        If passed, will exit early when goes to 1
     """
+    if done_signal is not None:
+
+        from bluesky.utils import first_key_heuristic 
+        signal_key = first_key_heuristic(done_signal)
+        def _check_signal():
+            val = yield from bps.read(done_signal)
+            if val is None:
+                return True
+            val = val[signal_key]['value']
+            return bool(val)
+    else:
+        _check_signal = None
+
     for j in range(exposure_count):
         start_time = time.monotonic()
 
@@ -233,19 +266,19 @@ def _inner_loop(dets, exposure_count, delay, deadline, per_step,
         sleep_time = delay - exp_actual
 
         yield from bps.checkpoint()
-        print(f'sleep time {sleep_time}')
+        if _check_signal is not None:
+            done = yield from _check_signal()
+            if done:
+                return
         if stop_time + sleep_time > deadline:
-            print(f'sleeping for: {deadline - stop_time}')
             yield from bps.sleep(deadline - stop_time)
-            print('finished final sleep, bouncing out')
             return
         else:
-            print(f'sleeping for: {delay - exp_actual}')
             yield from bps.sleep(delay - exp_actual)
 
 
 def flash_step(dets, VIT_table, md, *, delay=1, mm_mode='Current',
-               per_step=bps.trigger_and_read):
+               per_step=bps.trigger_and_read, control_shutter=True):
     """
     Run a step-series of current/voltage.
 
@@ -270,7 +303,7 @@ def flash_step(dets, VIT_table, md, *, delay=1, mm_mode='Current',
     mm_mode : {'Current', 'Voltage'}, optional
         The thing to measure from the Keithly multimeter.
 
-    per_step : Callable[List[OphydObj], Optional[str]] -> Generator[Msg]
+    per_step : Callable[List[OphydObj], Optional[str]] -> Generator[Msg], optional
         The inner-most data acquisition loop.
 
         This plan will be repeated as many times as possible (with
@@ -278,6 +311,11 @@ def flash_step(dets, VIT_table, md, *, delay=1, mm_mode='Current',
 
         If the plan take longer than *delay* to run it will
         immediately be restarted.
+
+    control_shutter : bool, optional
+        If the plan should try to open and close the shutter
+
+        defaults to True
     """
     all_dets = dets + [flash_power]
     req_cols = ['I', 'V', 't']
@@ -293,7 +331,7 @@ def flash_step(dets, VIT_table, md, *, delay=1, mm_mode='Current',
     md['plan_name'] = 'flash_step'
     md['plan_args'] = {'VIT_table': {k: v.values for k,v in VIT_table.items()},
                        'delay': delay}
-                       
+    md['detectors'] = [det.name for det in dets]                       
 
     @subs_decorator(bec)
     # paranoia to be very sure we turn the PSU off
@@ -347,17 +385,19 @@ def flash_step(dets, VIT_table, md, *, delay=1, mm_mode='Current',
         # turn it off!
         # there are several other places we turn this off, but better safe
         yield from bps.mv(flash_power.enabled, 0)
-        
-    if False:
+
+    plan = flash_step_field_inner()
+    if control_shutter:
         return (yield from bpp.plan_mutator(
-                    flash_step_field_inner(), inner_shutter_control))
+                    plan, inner_shutter_control))
     else:
-        return (yield from flash_step_field_inner())
+        return (yield from plan)
 
 
 def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
                delay=1, mm_mode='Current',
-               per_step=bps.trigger_and_read):
+               hold_time=0,
+               per_step=bps.trigger_and_read, control_shutter=True):
     """
     Run a current ramp
 
@@ -381,13 +421,20 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
     voltage : float
         The voltage limit through the current ramp.
 
+    md : dict
+        The metadata to put into the runstart.  Will have
+        some defaults added
+
     delay : float, optional
         The time lag between subsequent data acquisition
 
     mm_mode : {'Current', 'Voltage'}, optional
         The thing to measure from the Keithly multimeter.
 
-    per_step : Callable[List[OphydObj], Optional[str]] -> Generator[Msg]
+    hold_time : float, optional
+       How long to hold at the top of the ramp, defalts to 0
+
+    per_step : Callable[List[OphydObj], Optional[str]] -> Generator[Msg], optional
         The inner-most data acquisition loop.
 
         This plan will be repeated as many times as possible (with
@@ -395,13 +442,18 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
 
         If the plan take longer than *delay* to run it will
         immediately be restarted.
+
+    control_shutter : bool, optional
+        If the plan should try to open and close the shutter
+
+        defaults to True
     """
-    # convert mA -> Ag
-    start_I = start_I *1000
-    stop_I = stop_I * 1000
+    # mA -> A
+    start_I = start_I / 1000
+    stop_I = stop_I / 1000
     if stop_I < start_I:
         raise ValueError("IOC can not ramp backwards")
-    fudge_factor = 7
+    fudge_factor = 1
     ramp_rate *= fudge_factor
     all_dets = dets + [flash_power]
     monitor_during = yield from _setup_mm(mm_mode)
@@ -415,7 +467,7 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
     md['plan_args'] = {'start_I': start_I, 'stop_I': stop_I,
                        'ramp_rate': ramp_rate, 'voltage': voltage,
                        'delay': delay}
-    
+    md['detectors'] = [det.name for det in dets]
 
     @subs_decorator(bec)
     # paranoia to be very sure we turn the PSU off
@@ -452,9 +504,17 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
         
 
         yield from _inner_loop(all_dets, exposure_count, delay,
-                               time.monotonic() + expected_time,
-                               per_step, 'primary')
+                               time.monotonic() + expected_time * 1.1,
+                               per_step, 'primary',
+                               done_signal=flash_power.ramp_done)
 
+        if hold_time > 0:
+            yield from _inner_loop(all_dets,
+                                   int(max(1, hold_time // delay)),
+                                   delay,
+                                   time.monotonic() + hold_time,
+                                   per_step, 'primary')
+        
         # take one shot on the way out
         yield from per_step(all_dets, 'primary')
         yield from bps.wait(gid)
@@ -462,8 +522,12 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
         # there are several other places we turn this off, but better safe
         yield from bps.mv(flash_power.enabled, 0)
         
-    return (yield from flash_ramp_inner())
-
+    plan = flash_ramp_inner()
+    if control_shutter:
+        return (yield from bpp.plan_mutator(
+                    plan, inner_shutter_control))
+    else:
+        return (yield from plan)
 
 def sawtooth_factory(motor, start, stop, step_size):
     """Generate a per-step function that move the motor in a sawtooth
