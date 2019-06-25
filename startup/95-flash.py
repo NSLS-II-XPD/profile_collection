@@ -190,11 +190,15 @@ flash_power.current_sp.name = 'Isp'
 
 
 def _setup_mm(mm_mode):
-    yield from bps.mv(MM.readtype, mm_mode)
+
     if mm_mode == 'Current':
         monitor_during = [MM.readcurr]
+        yield from bps.mv(MM.readtype, mm_mode)        
     elif mm_mode == 'Voltage':
         monitor_during = [MM.readvolt]
+        yield from bps.mv(MM.readtype, mm_mode)                
+    elif mm_mode == 'none':
+        monitor_during = []
     else:
         raise ValueError(f'you passed mm_mode={mm_mode} '
                          'but the value must be one of '
