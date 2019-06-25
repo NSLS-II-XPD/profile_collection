@@ -281,8 +281,12 @@ def _inner_loop(dets, exposure_count, delay, deadline, per_step,
             yield from bps.sleep(delay - exp_actual)
 
 
-def flash_step(dets, VIT_table, md, *, delay=1, mm_mode='Current',
-               per_step=bps.trigger_and_read, control_shutter=True):
+def flash_step(VIT_table, total_exposure, md, *,
+               dets=None,
+               delay=1,
+               mm_mode='Current',
+               per_step=bps.trigger_and_read,
+               control_shutter=True):
     """
     Run a step-series of current/voltage.
 
@@ -290,16 +294,26 @@ def flash_step(dets, VIT_table, md, *, delay=1, mm_mode='Current',
 
     Parameters
     ----------
-    dets : List[OphydObj]
-        The detectors to trigger at each point
-
     VIT_table : pd.DataFrame
        The required columns are {"I", "V", "t"} which are
        the current, voltage, and hold time respectively.
 
+    total_exposure : float
+        The total exposure time for the detector.
+
+        This is set via _configure_area_detector which is
+        implicitly coupled to xpd_configuration['area_det']
+
     md : dict
         The metadata to put into the runstart.  Will have
         some defaults added
+
+    dets : List[OphydObj], optional
+        The detectors to trigger at each point.
+
+        If None, defaults to::
+
+          [xpd_configuration['area_det']]
 
     delay : float, optional
         The time lag between subsequent data acquisition
@@ -321,6 +335,13 @@ def flash_step(dets, VIT_table, md, *, delay=1, mm_mode='Current',
 
         defaults to True
     """
+    if total_exposure > delay:
+        raise RuntimeError(
+            f"You asked for total_exposure={total_exposure} "
+            f"with a delay of delay={delay} which is less ")    
+    if dets is None:
+        dets = [xpd_configuration['area_det']]
+    
     all_dets = dets + [flash_power]
     req_cols = ['I', 'V', 't']
     if not all(k in VIT_table for k in req_cols):
@@ -334,7 +355,8 @@ def flash_step(dets, VIT_table, md, *, delay=1, mm_mode='Current',
     md['hints'].setdefault('dimensions', [(('time',), 'primary')])
     md['plan_name'] = 'flash_step'
     md['plan_args'] = {'VIT_table': {k: v.values for k,v in VIT_table.items()},
-                       'delay': delay}
+                       'delay': delay,
+                       'total_exposure': total_exposure}
     md['detectors'] = [det.name for det in dets]                       
 
     @subs_decorator(bec)
@@ -390,6 +412,8 @@ def flash_step(dets, VIT_table, md, *, delay=1, mm_mode='Current',
         # there are several other places we turn this off, but better safe
         yield from bps.mv(flash_power.enabled, 0)
 
+    # HACK to get at global state
+    yield from _configure_area_det(total_exposure)
     plan = flash_step_field_inner()
     if control_shutter:
         return (yield from bpp.plan_mutator(
@@ -398,7 +422,11 @@ def flash_step(dets, VIT_table, md, *, delay=1, mm_mode='Current',
         return (yield from plan)
 
 
-def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
+def flash_ramp(start_I, stop_I, ramp_rate, voltage,
+               total_exposure,
+               md,
+               *,
+               dets=None,
                delay=1, mm_mode='Current',
                hold_time=0,
                per_step=bps.trigger_and_read, control_shutter=True):
@@ -409,9 +437,6 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
 
     Parameters
     ----------
-    dets : List[OphydObj]
-        The detectors to trigger at each point
-
     start_I, stop_I : float
         The start and end points of the current ramp
 
@@ -425,9 +450,22 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
     voltage : float
         The voltage limit through the current ramp.
 
+    total_exposure : float
+        The total exposure time for the detector.
+
+        This is set via _configure_area_detector which is
+        implicitly coupled to xpd_configuration['area_det']
+
     md : dict
         The metadata to put into the runstart.  Will have
         some defaults added
+
+    dets : List[OphydObj], optional
+        The detectors to trigger at each point.
+
+        If None, defaults to::
+
+          [xpd_configuration['area_det']]
 
     delay : float, optional
         The time lag between subsequent data acquisition
@@ -452,6 +490,12 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
 
         defaults to True
     """
+    if dets is None:
+        dets = [xpd_configuration['area_det']]
+    if total_exposure > delay:
+        raise RuntimeError(
+            f"You asked for total_exposure={total_exposure} "
+            f"with a delay of delay={delay} which is less ")
     # mA -> A
     start_I = start_I / 1000
     stop_I = stop_I / 1000
@@ -470,7 +514,8 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
     md['plan_name'] = 'flash_ramp'
     md['plan_args'] = {'start_I': start_I, 'stop_I': stop_I,
                        'ramp_rate': ramp_rate, 'voltage': voltage,
-                       'delay': delay}
+                       'delay': delay,
+                       'total_exposure': total_exposure}
     md['detectors'] = [det.name for det in dets]
 
     @subs_decorator(bec)
@@ -526,6 +571,8 @@ def flash_ramp(dets, start_I, stop_I, ramp_rate, voltage, md, *,
         # there are several other places we turn this off, but better safe
         yield from bps.mv(flash_power.enabled, 0)
         
+    # HACK to get at global state
+    yield from _configure_area_det(total_exposure)        
     plan = flash_ramp_inner()
     if control_shutter:
         return (yield from bpp.plan_mutator(
