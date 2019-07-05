@@ -165,6 +165,7 @@ class XPDPerkinElmer(PerkinElmerDetector):
     number_of_sets = C(Signal, value=1, add_prefix=())
 
     pixel_size = C(Signal, value=.0002, kind='config')
+    detector_type = C(Signal, value='Perkin', kind='config')
     stats1 = C(StatsPluginV33, 'Stats1:')
     stats2 = C(StatsPluginV33, 'Stats2:')
     stats3 = C(StatsPluginV33, 'Stats3:')
