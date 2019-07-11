@@ -40,12 +40,12 @@ class Eurotherm(EpicsSignalPositioner):
 
 eurotherm = Eurotherm('XF:28IDC-ES:1{Env:04}T-I',
                                  write_pv='XF:28IDC-ES:1{Env:04}T-SP',
-                                 tolerance= 3, name='eurotherm')
+                                 tolerance= 1, name='eurotherm')
 
 #hot air blower , add by Hui and Jianming
-#hotairblower=Eurotherm('XF:28IDC-ES:1{Env:03}T-I',
-                                # write_pv='XF:28IDC-ES:1{Env:03}T-SP',
-                               #  tolerance= 3, name='hotairblower')
+hotairblower=Eurotherm('XF:28IDC-ES:1{Env:03}T-I',
+                                 write_pv='XF:28IDC-ES:1{Env:03}T-SP',
+                                 tolerance= 1, name='hotairblower')
 
 class CryoStat(Device):
     # readback

@@ -41,7 +41,7 @@ pe1_x = EpicsMotor('XF:28IDC-ES:1{Det:PE1-Ax:X}Mtr', name='pe1_x')
 pe1_z = EpicsMotor('XF:28IDC-ES:1{Det:PE1-Ax:Z}Mtr', name='pe1_z')
 
 shctl1 = EpicsMotor('XF:28IDC-ES:1{Sh2:Exp-Ax:5}Mtr', name='shctl1')
-
+fs = shctl1 #added by dan
 
 class FilterBank(ophyd.Device):
     flt1 = ophyd.Component(EpicsSignal, '1-Cmd', string=True)

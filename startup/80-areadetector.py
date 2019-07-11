@@ -165,6 +165,8 @@ class XPDPerkinElmer(PerkinElmerDetector):
     number_of_sets = C(Signal, value=1, add_prefix=())
 
     pixel_size = C(Signal, value=.0002, kind='config')
+    #testing DO 
+    detector_type = C(Signal, value='Perkin', kind='config')
     stats1 = C(StatsPluginV33, 'Stats1:')
     stats2 = C(StatsPluginV33, 'Stats2:')
     stats3 = C(StatsPluginV33, 'Stats3:')
@@ -331,6 +333,7 @@ for det in [
     det.tiff.write_path_template = f'G:\\{det.name}_data\\%Y\\%m\\%d\\'
     det.cam.bin_x.kind = 'config'
     det.cam.bin_y.kind = 'config'
+    det.detector_type.kind = 'config'
     
 # some defaults, as an example of how to use this
 # pe1.configure(dict(images_per_set=6, number_of_sets=10))

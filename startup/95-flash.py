@@ -342,7 +342,7 @@ def flash_step(VIT_table, total_exposure, md, *,
     if dets is None:
         dets = [xpd_configuration['area_det']]
     
-    all_dets = dets + [flash_power]
+    all_dets = dets + [flash_power, eurotherm]
     req_cols = ['I', 'V', 't']
     if not all(k in VIT_table for k in req_cols):
         raise ValueError(f"input table must have {req_cols}")
@@ -503,7 +503,7 @@ def flash_ramp(start_I, stop_I, ramp_rate, voltage,
         raise ValueError("IOC can not ramp backwards")
     fudge_factor = 1
     ramp_rate *= fudge_factor
-    all_dets = dets + [flash_power]
+    all_dets = dets + [flash_power, eurotherm]
     monitor_during = yield from _setup_mm(mm_mode)
 
     expected_time = abs((stop_I - start_I) / (ramp_rate/(fudge_factor*60*1000)))
