@@ -40,6 +40,11 @@ hrm_r = EpicsMotor('XF:28IDC-OP:1{Mono:HRM-Ax:R}Mtr', name='hrm_r')
 pe1_x = EpicsMotor('XF:28IDC-ES:1{Det:PE1-Ax:X}Mtr', name='pe1_x')
 pe1_z = EpicsMotor('XF:28IDC-ES:1{Det:PE1-Ax:Z}Mtr', name='pe1_z')
 
+
+# MAD motions
+mad_pitch=EpicsMotor('XF:28IDC-ES:1{MAD:DMS-Ax:Pitch}Mtr', name='mad_pitch')
+
+
 shctl1 = EpicsMotor('XF:28IDC-ES:1{Sh2:Exp-Ax:5}Mtr', name='shctl1')
 fs = shctl1 #added by dan
 

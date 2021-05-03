@@ -66,7 +66,7 @@ def Tramp_gas_plan(detectors, gas_in, exp_time, Tstart, Tstop, Tstep,
     yield from set_gas(gas_in)
 
     # configure the exposure time first
-    (num_frame, acq_time, computed_exposure) = _configure_area_det(exp_time)
+    (num_frame, acq_time, computed_exposure) = yield from _configure_area_det(exp_time)
     (Nsteps, computed_step_size) = _nstep(Tstart, Tstop, Tstep)
     area_det = xpd_configuration['area_det']
     temp_controller = xpd_configuration['temp_controller']
@@ -119,7 +119,7 @@ def tseries_gas_plan(detectors, gas_in, exp_time, delay=1, num_exp=1,
     yield from set_gas(gas_in)
 
     # configure the exposure time first
-    (num_frame, acq_time, computed_exposure) = _configure_area_det(exp_time)
+    (num_frame, acq_time, computed_exposure) = yield from _configure_area_det(exp_time)
     real_delay = max(0, delay - computed_exposure)
     period = max(computed_exposure, real_delay + computed_exposure)
     print('INFO: requested delay = {}s  -> computed delay = {}s'
