@@ -33,6 +33,7 @@ cs700.readback.name = 'temperature'
 cs700.setpoint.name = 'temperature_setpoint'
 cs700.targettemp.name = 'temperature_target'
 
+'''
 class Eurotherm(EpicsSignalPositioner):
 
     def set(self, *args, **kwargs):
@@ -50,11 +51,42 @@ eurotherm_power = Eurotherm('XF:28IDC-ES:1{Env:04}Out-I',
 eurotherm_mode = Eurotherm('XF:28IDC-ES:1{Env:04}Mode:Man-Sts',
                                  write_pv='XF:28IDC-ES:1{Env:04}Mode:Man-Cmd',
                                  tolerance= 1, name='eurotherm_mode')
+'''
+
+class Eurotherm(Device):
+    temperature = Cpt(
+        EpicsSignalPositioner,
+        'T-I',
+        write_pv='T-SP',
+        tolerance=1,
+        #write_timeout=1000000
+    )
+    power = Cpt(
+        EpicsSignalPositioner,
+        'Out-I',
+        write_pv='Out-SP',
+        tolerance=1,
+        #write_timeout=1000
+    )
+    mode = Cpt(
+        EpicsSignal,
+        'Mode:Man-Sts',
+        write_pv='Mode:Man-Cmd',
+        kind='config',
+        string=True
+    )
+
+eurotherm = Eurotherm('XF:28IDC-ES:1{Env:04}', name='eurotherm')
+
+hotairblower = Eurotherm('XF:28IDC-ES:1{Env:03}', name='hotairblower')
+
+'''
 
 #hot air blower , add by Hui and Jianming
 hotairblower=Eurotherm('XF:28IDC-ES:1{Env:03}T-I',
                                  write_pv='XF:28IDC-ES:1{Env:03}T-SP',
                                  tolerance= 1, name='hotairblower')
+'''
 
 class CryoStat(Device):
     # readback
