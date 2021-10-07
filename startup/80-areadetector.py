@@ -149,7 +149,7 @@ class XPDPerkinElmer(PerkinElmerDetector):
              cam_name='cam',  # used to configure "tiff squashing"
              proc_name='proc',  # ditto
              read_attrs=[],
-             root='/nsls2/xf28id2/')
+             root='/nsls2/data/xpd/legacy/raw/')
 
     # hdf5 = C(XPDHDF5Plugin, 'HDF1:',
     #          write_path_template='G:/pe1_data/%Y/%m/%d/',
@@ -328,8 +328,8 @@ for det in [
             pe1, pe1m, pe1c,
             pe2, pe2m, pe2c
             ]:
-    det.tiff.read_path_template = f'/nsls2/xf28id2/{det.name}_data/%Y/%m/%d/'
-    det.tiff.write_path_template = f'G:\\{det.name}_data\\%Y\\%m\\%d\\'
+    det.tiff.read_path_template = f'/nsls2/data/xpd/legacy/raw/{det.name}_data/%Y/%m/%d/'
+    det.tiff.write_path_template = f'J:\\%Y\\%m\\%d\\'
     det.cam.bin_x.kind = 'config'
     det.cam.bin_y.kind = 'config'
     det.detector_type.kind = 'config'
