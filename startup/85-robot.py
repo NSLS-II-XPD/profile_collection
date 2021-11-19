@@ -11,24 +11,28 @@ from bluesky.callbacks import LiveTable
 from bluesky import Msg
 
 
-SAMPLE_GEOMETRY_NULL = '~~NULL_GEO~~'
+SAMPLE_GEOMETRY_NULL = "~~NULL_GEO~~"
 
 
 class Robot(Device):
-    sample_number = Cpt(EpicsSignal, 'ID:Tgt-SP')
-    load_cmd = Cpt(EpicsSignal, 'Cmd:Load-Cmd.PROC')
-    unload_cmd = Cpt(EpicsSignal, 'Cmd:Unload-Cmd.PROC')
-    execute_cmd = Cpt(EpicsSignal, 'Cmd:Exec-Cmd')
-    status = Cpt(EpicsSignal, 'Sts-Sts')
-    current_sample_number = Cpt(EpicsSignalRO, 'Addr:CurrSmpl-I')
+    sample_number = Cpt(EpicsSignal, "ID:Tgt-SP")
+    load_cmd = Cpt(EpicsSignal, "Cmd:Load-Cmd.PROC")
+    unload_cmd = Cpt(EpicsSignal, "Cmd:Unload-Cmd.PROC")
+    execute_cmd = Cpt(EpicsSignal, "Cmd:Exec-Cmd")
+    status = Cpt(EpicsSignal, "Sts-Sts")
+    current_sample_number = Cpt(EpicsSignalRO, "Addr:CurrSmpl-I")
 
     # Map sample types to their load position and measurement position.
-    TH_POS = {'capillary': {'load': None, 'measure': None},
-              'plate': {'load': 0, 'measure': 90},
-              None: {'load': None, 'measure': None}, }
-    REL_MOVES = ['plate']
+    TH_POS = {
+        "capillary": {"load": None, "measure": None},
+        "plate": {"load": 0, "measure": 90},
+        None: {"load": None, "measure": None},
+    }
+    REL_MOVES = ["plate"]
 
-    DIFF_POS = {'capilary': (1, 2), }
+    DIFF_POS = {
+        "capilary": (1, 2),
+    }
 
     def __init__(self, *args, theta, diff=None, **kwargs):
         """
@@ -43,25 +47,26 @@ class Robot(Device):
 
     def _poll_until_idle(self):
         time.sleep(3)  # give it plenty of time to start
-        while self.status.get() != 'Idle':
-            time.sleep(.1)
+        while self.status.get() != "Idle":
+            time.sleep(0.1)
 
     def _poll_until_sample_cleared(self):
         while self.current_sample_number.get() != 0:
-            time.sleep(.1)
+            time.sleep(0.1)
 
     def load_sample(self, sample_number, sample_geometry=None):
         # If no sample is loaded, current_sample_number=0
         # is reported by the robot.
         if self.current_sample_number.get() != 0:
             raise RuntimeError(
-                "Sample %d is already loaded." % self.current_sample_number.get())
+                "Sample %d is already loaded." % self.current_sample_number.get()
+            )
 
         # Rotate theta into loading position if necessary (e.g. flat plate mode).
-        load_pos = self.TH_POS[sample_geometry]['load']
+        load_pos = self.TH_POS[sample_geometry]["load"]
         if load_pos is not None:
             if sample_geometry not in self.REL_MOVES:
-                print('Moving theta to load position')
+                print("Moving theta to load position")
                 self.theta.move(load_pos, wait=True)
 
         # Loading the sample is a three-step procedure:
@@ -69,13 +74,13 @@ class Robot(Device):
         set_and_wait(self.sample_number, sample_number)
         set_and_wait(self.load_cmd, 1)
         self.execute_cmd.put(1)
-        print('Loading...')
+        print("Loading...")
         self._poll_until_idle()
 
         # Rotate theta into measurement position if necessary (e.g. flat plate mode).
-        measure_pos = self.TH_POS[sample_geometry]['measure']
+        measure_pos = self.TH_POS[sample_geometry]["measure"]
         if measure_pos is not None:
-            print('Moving theta to measure position')
+            print("Moving theta to measure position")
             if sample_geometry not in self.REL_MOVES:
                 self.theta.move(measure_pos, wait=True)
             else:
@@ -93,11 +98,11 @@ class Robot(Device):
         # Rotate theta into loading position if necessary (e.g. flat plate mode)
         if self._current_sample_geometry == SAMPLE_GEOMETRY_NULL:
             raise RuntimeError("Unknown current sample geometry, can not unload")
-        load_pos = self.TH_POS[self._current_sample_geometry]['load']
-        measure_pos = self.TH_POS[self._current_sample_geometry]['measure']
+        load_pos = self.TH_POS[self._current_sample_geometry]["load"]
+        measure_pos = self.TH_POS[self._current_sample_geometry]["measure"]
         print(load_pos, measure_pos)
         if load_pos is not None:
-            print('Moving theta to unload position')
+            print("Moving theta to unload position")
             if self._current_sample_geometry not in self.REL_MOVES:
                 self.theta.move(load_pos, wait=True)
             else:
@@ -106,7 +111,7 @@ class Robot(Device):
 
         set_and_wait(self.unload_cmd, 1)
         self.execute_cmd.put(1)
-        print('Unloading...')
+        print("Unloading...")
         self._poll_until_idle()
         self._poll_until_sample_cleared()
         self._current_sample_geometry = SAMPLE_GEOMETRY_NULL
@@ -117,6 +122,7 @@ class Robot(Device):
 
 
 # Define custom commands for sample loading/unloading.
+
 
 @asyncio.coroutine
 def _load_sample(msg):
@@ -130,24 +136,25 @@ def _unload_sample(msg):
 
 # Register these custom command with the RunEngine.
 
-RE.register_command('load_sample', _load_sample)
-RE.register_command('unload_sample', _unload_sample)
+RE.register_command("load_sample", _load_sample)
+RE.register_command("unload_sample", _unload_sample)
 
 
 # For convenience, define short plans the use these custom commands.
 
+
 def load_sample(position, geometry=None):
     # TODO: I think this can be simpler.
-    return (
-        yield from single_gen(Msg('load_sample', robot, position, geometry)))
+    return (yield from single_gen(Msg("load_sample", robot, position, geometry)))
 
 
 def unload_sample():
     # TODO: I think this can be simpler.
-    return (yield from single_gen(Msg('unload_sample', robot)))
+    return (yield from single_gen(Msg("unload_sample", robot)))
 
 
 # These are usable bluesky plans.
+
 
 def robot_wrapper(plan, sample):
     """Wrap a plan in load/unload messages.
@@ -163,7 +170,7 @@ def robot_wrapper(plan, sample):
     >>> plan = count([pe1c])
     >>> new_plan = robot_wrapper(plan, {'position': 1})
     """
-    yield from load_sample(sample['position'], sample.get('geometry', None))
+    yield from load_sample(sample["position"], sample.get("geometry", None))
     yield from plan
     yield from unload_sample()
 
@@ -203,14 +210,16 @@ def Tramp(sample, exposure, start, stop, step):
 
 
 # Define list of sample info.
-samples = [{'position': 1, 'geometry': 'capillary', 'sample_name': 'stuff'},
-           {'position': 2, 'geometry': 'plate', 'sample_name': 'other_stuff'}]
+samples = [
+    {"position": 1, "geometry": "capillary", "sample_name": "stuff"},
+    {"position": 2, "geometry": "plate", "sample_name": "other_stuff"},
+]
 
 
 def example():
     for sample in samples:
         # Define a normal plan, from bluesky or xpdacq.
-        plan = bp.count([], md={'sample_name': sample['sample_name']})
+        plan = bp.count([], md={"sample_name": sample["sample_name"]})
         # Modify the plan by stacking robot instructions before and after.
         # It also needs the sample, from which it extracts the numerical
         # sample 'position' (required) # and 'geometry' (optional).
@@ -223,22 +232,25 @@ def excel_example(filename, geometry=None):
     Example: RE(excel_example('/XF28IDC/XF28ID2/pe2_data/xpdUser/Import/example-with-dan.xlsx'))
     """
     import pandas as pd
+
     f = pd.ExcelFile(filename)
     sheet = f.parse()
     for _, row in sheet.iloc[1:].iterrows():
         name, phase, bg_name, position = row[:4]
         position = int(position)
-        sample = {'sample_name': name,
-                  'phase_info': phase,
-                  'bg_name': bg_name,
-                  'position': position,
-                  'geometry': geometry}
+        sample = {
+            "sample_name": name,
+            "phase_info": phase,
+            "bg_name": bg_name,
+            "position": position,
+            "geometry": geometry,
+        }
         plan = bp.count([], md=sample)
         yield from robot_wrapper(plan, sample)
 
 
 # master_plan = pchain(plan(sample) for sample in samples)
 
-robot = Robot('XF:28IDC-ES:1{SM}', name='robot', theta=th)
+robot = Robot("XF:28IDC-ES:1{SM}", name="robot", theta=th)
 
 # old RobotPositioner code is .ipython/profile_2015_collection/startup/robot.py

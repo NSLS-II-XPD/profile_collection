@@ -3,17 +3,18 @@ from ophyd import Device, Component as Cpt
 
 
 class RGA(Device):
-    startRGA = Cpt(EpicsSignal, 'Cmd:MID_Start-Cmd')
-    stopRGA = Cpt(EpicsSignal, 'Cmd:ScanAbort-Cmd')
-    mass1 = Cpt(EpicsSignalRO, 'P:MID1-I')
-    mass2 = Cpt(EpicsSignalRO, 'P:MID2-I')
-    mass3 = Cpt(EpicsSignalRO, 'P:MID3-I')
-    mass4 = Cpt(EpicsSignalRO, 'P:MID4-I')
-    mass5 = Cpt(EpicsSignalRO, 'P:MID5-I')
-    mass6 = Cpt(EpicsSignalRO, 'P:MID6-I')
-    mass7 = Cpt(EpicsSignalRO, 'P:MID7-I')
-    mass8 = Cpt(EpicsSignalRO, 'P:MID8-I')
-    mass9 = Cpt(EpicsSignalRO, 'P:MID9-I')
+    startRGA = Cpt(EpicsSignal, "Cmd:MID_Start-Cmd")
+    stopRGA = Cpt(EpicsSignal, "Cmd:ScanAbort-Cmd")
+    mass1 = Cpt(EpicsSignalRO, "P:MID1-I")
+    mass2 = Cpt(EpicsSignalRO, "P:MID2-I")
+    mass3 = Cpt(EpicsSignalRO, "P:MID3-I")
+    mass4 = Cpt(EpicsSignalRO, "P:MID4-I")
+    mass5 = Cpt(EpicsSignalRO, "P:MID5-I")
+    mass6 = Cpt(EpicsSignalRO, "P:MID6-I")
+    mass7 = Cpt(EpicsSignalRO, "P:MID7-I")
+    mass8 = Cpt(EpicsSignalRO, "P:MID8-I")
+    mass9 = Cpt(EpicsSignalRO, "P:MID9-I")
+
 
 ## We don't want the RGA to start and stop by any bluseky plan###
 
@@ -33,6 +34,18 @@ class RGA(Device):
         return res
  """
 
-rga = RGA('XF:28IDC-VA{RGA:2}',
-          name='rga',
-          read_attrs=['mass1', 'mass2', 'mass3', 'mass4','mass5', 'mass6', 'mass7', 'mass8', 'mass9'])
+rga = RGA(
+    "XF:28IDC-VA{RGA:2}",
+    name="rga",
+    read_attrs=[
+        "mass1",
+        "mass2",
+        "mass3",
+        "mass4",
+        "mass5",
+        "mass6",
+        "mass7",
+        "mass8",
+        "mass9",
+    ],
+)

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 
 def lamda_from_bragg(th, d, n):
-    return 2 * d * np.sin(th / 2.) / n
+    return 2 * d * np.sin(th / 2.0) / n
 
 
 def find_peaks(chi, sides=6, intensity_threshold=0):
@@ -15,7 +15,8 @@ def find_peaks(chi, sides=6, intensity_threshold=0):
 
     # peaks must have at least sides pixels of data to work with
     preliminary_peaks2 = preliminary_peaks[
-        np.where(preliminary_peaks < len(chi) - sides)]
+        np.where(preliminary_peaks < len(chi) - sides)
+    ]
 
     # make certain that a peak has a drop off which causes the peak height to
     # be more than twice the height at sides pixels away
@@ -57,7 +58,7 @@ def get_wavelength_from_std_tth(x, y, d_spacings, ns, plot=False):
         The standard deviation of the wavelength
     """
     l, r, c = find_peaks(y, sides=12)
-    n_sym_peaks = len(c)//2
+    n_sym_peaks = len(c) // 2
     lmfit_centers = []
     for lidx, ridx, peak_center in zip(l, r, c):
         suby = y[lidx:ridx]
@@ -66,31 +67,33 @@ def get_wavelength_from_std_tth(x, y, d_spacings, ns, plot=False):
         mod2 = LinearModel()
         pars1 = mod1.guess(suby, x=subx)
         pars2 = mod2.make_params(slope=0, intercept=0)
-        mod = mod1+mod2
-        pars = pars1+pars2
+        mod = mod1 + mod2
+        pars = pars1 + pars2
         out = mod.fit(suby, pars, x=subx)
-        lmfit_centers.append(out.values['center'])
+        lmfit_centers.append(out.values["center"])
         if plot:
-            plt.plot(subx, out.best_fit, '--')
-            plt.plot(subx, suby - out.best_fit, '.')
+            plt.plot(subx, out.best_fit, "--")
+            plt.plot(subx, suby - out.best_fit, ".")
     lmfit_centers = np.asarray(lmfit_centers)
     if plot:
-        plt.plot(x, y, 'b')
-        plt.plot(x[c], y[c], 'ro')
-        plt.plot(x, np.zeros(x.shape), 'k.')
+        plt.plot(x, y, "b")
+        plt.plot(x[c], y[c], "ro")
+        plt.plot(x, np.zeros(x.shape), "k.")
         plt.show()
 
     offset = []
     for i in range(0, n_sym_peaks):
-        o = (np.abs(lmfit_centers[i]) -  np.abs(lmfit_centers[2*n_sym_peaks-i-1]))/2.
+        o = (
+            np.abs(lmfit_centers[i]) - np.abs(lmfit_centers[2 * n_sym_peaks - i - 1])
+        ) / 2.0
         # print(o)
         offset.append(o)
-    print('predicted offset {}'.format(np.median(offset)))
+    print("predicted offset {}".format(np.median(offset)))
     lmfit_centers += np.median(offset)
     print(lmfit_centers)
     wavelengths = []
-    l_peaks = lmfit_centers[lmfit_centers < 0.]
-    r_peaks = lmfit_centers[lmfit_centers > 0.]
+    l_peaks = lmfit_centers[lmfit_centers < 0.0]
+    r_peaks = lmfit_centers[lmfit_centers > 0.0]
     for peak_set in [r_peaks, l_peaks[::-1]]:
         for peak_center, d, n in zip(peak_set, d_spacings, ns):
             tth = np.deg2rad(np.abs(peak_center))
@@ -108,7 +111,9 @@ class ComputeWavelength(CollectThenCompute):
     >>> cw = ComputeWavelgnth('tth_cal', 'some_detector', d_spacings, ns)
     >>> RE(scan(...), cw)
     """
+
     CONVERSION_FACTOR = 12.3984  # keV-Angstroms
+
     def __init__(self, x_name, y_name, d_spacings, ns=None):
         self._descriptors = []
         self._events = []
@@ -134,14 +139,17 @@ class ComputeWavelength(CollectThenCompute):
         x = []
         y = []
         for event in self._events:
-            x.append(event['data'][self.x_name])
-            y.append(event['data'][self.y_name])
+            x.append(event["data"][self.x_name])
+            y.append(event["data"][self.y_name])
 
         x = np.array(x)
         y = np.array(y)
-        self.wavelength, self.wavelength_std, self.offset = get_wavelength_from_std_tth(x, y, self.d_spacings, self.ns)
-        print('wavelength', self.wavelength, '+-', self.wavelength_std)
-        print('energy', self.energy)
+        self.wavelength, self.wavelength_std, self.offset = get_wavelength_from_std_tth(
+            x, y, self.d_spacings, self.ns
+        )
+        print("wavelength", self.wavelength, "+-", self.wavelength_std)
+        print("energy", self.energy)
+
 
 """
 if __name__ == '__main__':

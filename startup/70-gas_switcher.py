@@ -12,9 +12,11 @@ class GasSignal(DerivedSignal):
         pos = super().get(**kwargs)
         num_gasses = len(self.parent.gas_list)
         if pos > num_gasses:
-            raise ValueError("The gas switcher is at position %d "
-                             "but we only know about %d gasses. "
-                             "Update gas_list." % (pos, num_gasses))
+            raise ValueError(
+                "The gas switcher is at position %d "
+                "but we only know about %d gasses. "
+                "Update gas_list." % (pos, num_gasses)
+            )
 
         return self.parent.gas_list[int(pos - 1)]
 
@@ -23,27 +25,28 @@ class GasSignal(DerivedSignal):
         pos = 1 + self.parent.gas_list.index(gas_name)
         num_gasses = len(self.parent.gas_list)
         if pos > num_gasses:
-            raise ValueError("You have asked to move to position %d "
-                             "but we only know about %d gasses. "
-                             "Update gas_list first." % (pos, num_gasses))
+            raise ValueError(
+                "You have asked to move to position %d "
+                "but we only know about %d gasses. "
+                "Update gas_list first." % (pos, num_gasses)
+            )
         return super().put(pos, **kwargs)
 
     def describe(self):
         res = super().describe()
-        k, = res.keys()
-        res[k].pop('precision')
-        res[k]['dtype'] = 'string'
+        (k,) = res.keys()
+        res[k].pop("precision")
+        res[k]["dtype"] = "string"
         return res
 
 
 class XPDGasSwitcher(Device):
     # The values here are integer, so this tolerance is just made up.
-    current_pos = Cpt(EpicsSignal, 'Pos-I',
-                      write_pv='Pos-SP', tolerance=0.01 )
-    requested_pos = Cpt(EpicsSignal, 'Pos-SP')
+    current_pos = Cpt(EpicsSignal, "Pos-I", write_pv="Pos-SP", tolerance=0.01)
+    requested_pos = Cpt(EpicsSignal, "Pos-SP")
 
-    current_gas = Cpt(GasSignal, parent_attr_name='current_pos')
-    requested_gas = Cpt(GasSignal, parent_attr_name='requested_pos')
+    current_gas = Cpt(GasSignal, parent_attr_name="current_pos")
+    requested_gas = Cpt(GasSignal, parent_attr_name="requested_pos")
 
     def __init__(self, *args, gas_list=None, **kwargs):
         if gas_list is None:
@@ -55,9 +58,11 @@ class XPDGasSwitcher(Device):
         """value should be a string like 'Ni'"""
         # This looks confusing, but it's correct and tested.
         if value not in self.gas_list:
-            raise KeyError("There is no gas %s in gas_list. "
-                           "Update list or use one of these: %r"
-                           % (value, self.gas_list))
+            raise KeyError(
+                "There is no gas %s in gas_list. "
+                "Update list or use one of these: %r" % (value, self.gas_list)
+            )
         return self.current_gas.set(value)
 
-gas = XPDGasSwitcher('XF:28IDC-ES:1{Env:02}', name='gas')
+
+gas = XPDGasSwitcher("XF:28IDC-ES:1{Env:02}", name="gas")

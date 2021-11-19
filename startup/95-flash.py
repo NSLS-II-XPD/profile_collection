@@ -1,9 +1,10 @@
-from ophyd import (Device,
-                   Component as Cpt,
-                   EpicsSignal, EpicsSignalRO, Signal)
+from ophyd import Device, Component as Cpt, EpicsSignal, EpicsSignalRO, Signal
 from bluesky.preprocessors import (
-    run_decorator, stage_decorator, finalize_decorator,
-    monitor_during_decorator)
+    run_decorator,
+    stage_decorator,
+    finalize_decorator,
+    monitor_during_decorator,
+)
 
 import bluesky.plan_stubs as bps
 from bluesky.utils import short_uid
@@ -11,6 +12,7 @@ import pandas as pd
 import time
 import itertools
 from bluesky.preprocessors import subs_decorator
+
 #### Funtions for tseries type run with shuuter control and triggering other Ophyd Devices
 from xpdacq.beamtime import open_shutter_stub, close_shutter_stub
 
@@ -18,17 +20,19 @@ import bluesky.plans as bp
 import bluesky.plan_stubs as bps
 import bluesky.preprocessors as bpp
 
+
 def inner_shutter_control(msg):
     if msg.command == "trigger":
+
         def inner():
             yield from open_shutter_stub()
             yield msg
+
         return inner(), None
     elif msg.command == "save":
         return None, close_shutter_stub()
     else:
         return None, None
-
 
 
 class CurrentSetterEpicSignal(EpicsSignal):
@@ -42,11 +46,11 @@ class CurrentEnable(EpicsSignal):
 
 
 class FlashRampInternals(Device):
-    next_sp = Cpt(EpicsSignalRO, 'I:Next-SP')
-    next_min = Cpt(EpicsSignalRO, 'I:Next-Min')
-    sp1 = Cpt(EpicsSignalRO, 'I:OutMain-SP1')
-    sp = Cpt(EpicsSignalRO, 'I:OutMain-SP')
-    scheduler = Cpt(EpicsSignalRO, 'I:Scheduler')
+    next_sp = Cpt(EpicsSignalRO, "I:Next-SP")
+    next_min = Cpt(EpicsSignalRO, "I:Next-Min")
+    sp1 = Cpt(EpicsSignalRO, "I:OutMain-SP1")
+    sp = Cpt(EpicsSignalRO, "I:OutMain-SP")
+    scheduler = Cpt(EpicsSignalRO, "I:Scheduler")
 
 
 class FlakySignal(EpicsSignal):
@@ -57,71 +61,63 @@ class FlakySignal(EpicsSignal):
             if v is not None:
                 return v
         else:
-            raise RuntimeError(
-                f"{self}.get got {N} None readings?!?")
-    
+            raise RuntimeError(f"{self}.get got {N} None readings?!?")
+
 
 class FlashPower(Device):
     # stuff from PSU sorensonxg850.template
-    current = Cpt(EpicsSignalRO, 'I-I', kind='hinted')
-    voltage = Cpt(EpicsSignalRO, 'E-I', kind='hinted')
+    current = Cpt(EpicsSignalRO, "I-I", kind="hinted")
+    voltage = Cpt(EpicsSignalRO, "E-I", kind="hinted")
 
-    current_sp = Cpt(CurrentSetterEpicSignal,
-                     'I-Lim',
-                     write_pv='I-Lim')
-    voltage_sp = Cpt(FlakySignal,
-                     'E:OutMain-RB',
-                     write_pv='E:OutMain-SP',
-                     tolerance=.01)
+    current_sp = Cpt(CurrentSetterEpicSignal, "I-Lim", write_pv="I-Lim")
+    voltage_sp = Cpt(
+        FlakySignal, "E:OutMain-RB", write_pv="E:OutMain-SP", tolerance=0.01
+    )
 
-    enabled = Cpt(CurrentEnable,
-                  'Enbl:OutMain-Sts',
-                  write_pv='Enbl:OutMain-Cmd',
-                  kind='omitted',
-                  string=True)
+    enabled = Cpt(
+        CurrentEnable,
+        "Enbl:OutMain-Sts",
+        write_pv="Enbl:OutMain-Cmd",
+        kind="omitted",
+        string=True,
+    )
 
-    remote_lockout = Cpt(EpicsSignal,
-                         'Enbl:Lock-Sts',
-                         write_pv='Enbl:Lock-Cmd',
-                         string=True,
-                         kind='config')
+    remote_lockout = Cpt(
+        EpicsSignal,
+        "Enbl:Lock-Sts",
+        write_pv="Enbl:Lock-Cmd",
+        string=True,
+        kind="config",
+    )
 
-    foldback_mode = Cpt(EpicsSignal,
-                        'Mode:Fold-Sts',
-                        write_pv='Mode:Fold-Sel',
-                        string=True,
-                        kind='config')
+    foldback_mode = Cpt(
+        EpicsSignal,
+        "Mode:Fold-Sts",
+        write_pv="Mode:Fold-Sel",
+        string=True,
+        kind="config",
+    )
 
-    over_volt_val = Cpt(EpicsSignal,
-                        'E:OverProt-RB',
-                        write_pv='E:OverProt-SP',
-                        kind='config')
+    over_volt_val = Cpt(
+        EpicsSignal, "E:OverProt-RB", write_pv="E:OverProt-SP", kind="config"
+    )
 
-    protection_reset = Cpt(
-        EpicsSignal, 'Reset:FoldProt-Cmd',
-        kind='omitted')
+    protection_reset = Cpt(EpicsSignal, "Reset:FoldProt-Cmd", kind="omitted")
 
-    status = Cpt(EpicsSignalRO, 'Sts:Opr-Sts')
+    status = Cpt(EpicsSignalRO, "Sts:Opr-Sts")
 
     # stuff from ramp_rate.db
-    ramp_rate = Cpt(EpicsSignal,
-                    'I-RampRate-RB',
-                    write_pv='I-RampRate-I',
-                    kind='config')
+    ramp_rate = Cpt(
+        EpicsSignal, "I-RampRate-RB", write_pv="I-RampRate-I", kind="config"
+    )
 
-    delta = Cpt(EpicsSignalRO,
-                'I-Delta',
-                kind='config')
+    delta = Cpt(EpicsSignalRO, "I-Delta", kind="config")
 
-    mode = Cpt(EpicsSignal, 'UserMode-I',
-               string=True,
-               kind='config')
+    mode = Cpt(EpicsSignal, "UserMode-I", string=True, kind="config")
 
-    ramp_done = Cpt(EpicsSignalRO,
-                    'CurrRamp-Done',
-                    kind='omitted')
+    ramp_done = Cpt(EpicsSignalRO, "CurrRamp-Done", kind="omitted")
 
-    _internals = Cpt(FlashRampInternals, '', kind='omitted')
+    _internals = Cpt(FlashRampInternals, "", kind="omitted")
 
     def unstage(self):
         ret = super().unstage()
@@ -147,68 +143,76 @@ class KeithlyMMChannel(Device):
 
 class KeithlyMM(Device):
     # these are the ones documented in the readme
-    readtype = Cpt(EpicsSignal, "ReadType", kind='config',
-                   string=True)
+    readtype = Cpt(EpicsSignal, "ReadType", kind="config", string=True)
     # the readme says you get one or the other which seems odd?
-    readcurr = Cpt(EpicsSignal, "ReadCurr", kind='hinted')
-    readvolt = Cpt(EpicsSignal, "ReadVolt", kind='hinted')
+    readcurr = Cpt(EpicsSignal, "ReadCurr", kind="hinted")
+    readvolt = Cpt(EpicsSignal, "ReadVolt", kind="hinted")
 
-    synctype = Cpt(EpicsSignal, "SyncType", kind='config')
+    synctype = Cpt(EpicsSignal, "SyncType", kind="config")
 
     # other records in db file, not sure what to do with
-    test = Cpt(EpicsSignal, "test", kind='omitted')
+    test = Cpt(EpicsSignal, "test", kind="omitted")
 
-    timetotal = Cpt(EpicsSignal, "TimeTotal", kind='omitted')
+    timetotal = Cpt(EpicsSignal, "TimeTotal", kind="omitted")
 
     # this looks like a way to buffer in device?
-    scaninterval = Cpt(EpicsSignal, "ScanInterval", kind='omitted')
-    numchannels = Cpt(EpicsSignal, "NumChannels", kind='omitted')
-    scancount = Cpt(EpicsSignal, "ScanCount", kind='omitted')
+    scaninterval = Cpt(EpicsSignal, "ScanInterval", kind="omitted")
+    numchannels = Cpt(EpicsSignal, "NumChannels", kind="omitted")
+    scancount = Cpt(EpicsSignal, "ScanCount", kind="omitted")
 
-    func = Cpt(EpicsSignal, "Func", kind='omitted')
+    func = Cpt(EpicsSignal, "Func", kind="omitted")
 
     # these seems important?
-    scanresults = Cpt(EpicsSignal, "ScanResults", kind='omitted')
-    timestamp = Cpt(EpicsSignal, "Timestamp", kind='omitted')
-    timestampfrac = Cpt(EpicsSignal, "TimestampFrac", kind='omitted')
-    timestampint = Cpt(EpicsSignal, "TimestampInt", kind='omitted')
+    scanresults = Cpt(EpicsSignal, "ScanResults", kind="omitted")
+    timestamp = Cpt(EpicsSignal, "Timestamp", kind="omitted")
+    timestampfrac = Cpt(EpicsSignal, "TimestampFrac", kind="omitted")
+    timestampint = Cpt(EpicsSignal, "TimestampInt", kind="omitted")
 
-    readtypeseq = Cpt(EpicsSignal, "ReadTypeSeq", kind='omitted')
+    readtypeseq = Cpt(EpicsSignal, "ReadTypeSeq", kind="omitted")
 
 
-MM = KeithlyMM('XF:28IDC-ES{KDMM6500}', name='MM')
-flash_power = FlashPower('XF:28ID2-ES:1{PSU:SRS}', name='flash_power')
+MM = KeithlyMM("XF:28IDC-ES{KDMM6500}", name="MM")
+flash_power = FlashPower("XF:28ID2-ES:1{PSU:SRS}", name="flash_power")
 
-[setattr(getattr(flash_power._internals, n), 'kind', 'hinted') for n in flash_power._internals.component_names]
-[setattr(getattr(flash_power._internals, n), 'name', n) for n in flash_power._internals.component_names]
-flash_power._internals.kind = 'omitted'
+[
+    setattr(getattr(flash_power._internals, n), "kind", "hinted")
+    for n in flash_power._internals.component_names
+]
+[
+    setattr(getattr(flash_power._internals, n), "name", n)
+    for n in flash_power._internals.component_names
+]
+flash_power._internals.kind = "omitted"
 
-flash_power._internals.scheduler.kind = 'omitted'
-flash_power.current.name = 'I'
-flash_power.voltage.name = 'V'
-flash_power.current_sp.name = 'Isp'
+flash_power._internals.scheduler.kind = "omitted"
+flash_power.current.name = "I"
+flash_power.voltage.name = "V"
+flash_power.current_sp.name = "Isp"
 
 
 def _setup_mm(mm_mode):
 
-    if mm_mode == 'Current':
+    if mm_mode == "Current":
         monitor_during = [MM.readcurr]
-        yield from bps.mv(MM.readtype, mm_mode)        
-    elif mm_mode == 'Voltage':
+        yield from bps.mv(MM.readtype, mm_mode)
+    elif mm_mode == "Voltage":
         monitor_during = [MM.readvolt]
-        yield from bps.mv(MM.readtype, mm_mode)                
-    elif mm_mode == 'none':
+        yield from bps.mv(MM.readtype, mm_mode)
+    elif mm_mode == "none":
         monitor_during = []
     else:
-        raise ValueError(f'you passed mm_mode={mm_mode} '
-                         'but the value must be one of '
-                         '{"Current", "Voltage"}')
+        raise ValueError(
+            f"you passed mm_mode={mm_mode} "
+            "but the value must be one of "
+            '{"Current", "Voltage"}'
+        )
 
     return monitor_during
 
 
-def _inner_loop(dets, exposure_count, delay, deadline, per_step,
-                stream_name, done_signal=None):
+def _inner_loop(
+    dets, exposure_count, delay, deadline, per_step, stream_name, done_signal=None
+):
     """Helper plan for the inner loop of the sinter plans
 
     This is very much like the repeat plan, but has less
@@ -242,14 +246,17 @@ def _inner_loop(dets, exposure_count, delay, deadline, per_step,
     """
     if done_signal is not None:
 
-        from bluesky.utils import first_key_heuristic 
+        from bluesky.utils import first_key_heuristic
+
         signal_key = first_key_heuristic(done_signal)
+
         def _check_signal():
             val = yield from bps.read(done_signal)
             if val is None:
                 return True
-            val = val[signal_key]['value']
+            val = val[signal_key]["value"]
             return bool(val)
+
     else:
         _check_signal = None
 
@@ -259,7 +266,7 @@ def _inner_loop(dets, exposure_count, delay, deadline, per_step,
         yield from bps.checkpoint()
         # if things get bogged down in data collection, bail early!
         if start_time > deadline:
-            print(f'{start_time} > {deadline} bail!')
+            print(f"{start_time} > {deadline} bail!")
             break
 
         # this triggers the cameras
@@ -281,12 +288,17 @@ def _inner_loop(dets, exposure_count, delay, deadline, per_step,
             yield from bps.sleep(delay - exp_actual)
 
 
-def flash_step(VIT_table, total_exposure, md, *,
-               dets=None,
-               delay=1,
-               mm_mode='Current',
-               per_step=bps.trigger_and_read,
-               control_shutter=True):
+def flash_step(
+    VIT_table,
+    total_exposure,
+    md,
+    *,
+    dets=None,
+    delay=1,
+    mm_mode="Current",
+    per_step=bps.trigger_and_read,
+    control_shutter=True,
+):
     """
     Run a step-series of current/voltage.
 
@@ -338,12 +350,13 @@ def flash_step(VIT_table, total_exposure, md, *,
     if total_exposure > delay:
         raise RuntimeError(
             f"You asked for total_exposure={total_exposure} "
-            f"with a delay of delay={delay} which is less ")    
+            f"with a delay of delay={delay} which is less "
+        )
     if dets is None:
-        dets = [xpd_configuration['area_det']]
-    
+        dets = [xpd_configuration["area_det"]]
+
     all_dets = dets + [flash_power, eurotherm]
-    req_cols = ['I', 'V', 't']
+    req_cols = ["I", "V", "t"]
     if not all(k in VIT_table for k in req_cols):
         raise ValueError(f"input table must have {req_cols}")
 
@@ -351,13 +364,15 @@ def flash_step(VIT_table, total_exposure, md, *,
 
     VIT_table = pd.DataFrame(VIT_table)
     # TODO put in default meta-data
-    md.setdefault('hints', {})
-    md['hints'].setdefault('dimensions', [(('time',), 'primary')])
-    md['plan_name'] = 'flash_step'
-    md['plan_args'] = {'VIT_table': {k: v.values for k,v in VIT_table.items()},
-                       'delay': delay,
-                       'total_exposure': total_exposure}
-    md['detectors'] = [det.name for det in dets]                       
+    md.setdefault("hints", {})
+    md["hints"].setdefault("dimensions", [(("time",), "primary")])
+    md["plan_name"] = "flash_step"
+    md["plan_args"] = {
+        "VIT_table": {k: v.values for k, v in VIT_table.items()},
+        "delay": delay,
+        "total_exposure": total_exposure,
+    }
+    md["detectors"] = [det.name for det in dets]
 
     @subs_decorator(bec)
     # paranoia to be very sure we turn the PSU off
@@ -370,44 +385,43 @@ def flash_step(VIT_table, total_exposure, md, *,
     @run_decorator(md=md)
     def flash_step_field_inner():
         # set everything to zero at the top
-        yield from bps.mv(flash_power.current_sp, 0,
-                          flash_power.voltage_sp, 0)
+        yield from bps.mv(flash_power.current_sp, 0, flash_power.voltage_sp, 0)
         # put in "Duty Cycle" mode so current changes immediately
-        yield from bps.mv(flash_power.mode, 'Duty-Cycle')
+        yield from bps.mv(flash_power.mode, "Duty-Cycle")
 
         # take a measurement on the way in
-        yield from per_step(all_dets, 'primary')
+        yield from per_step(all_dets, "primary")
 
         # turn it on!
         yield from bps.mv(flash_power.enabled, 1)
 
         last_I = last_V = np.nan
         for _, row in VIT_table.iterrows():
-            tau = row['t']
+            tau = row["t"]
             exposure_count = int(max(1, tau // delay))
-            print('initial per step call')
-            yield from per_step(all_dets, 'primary')
-            next_I = row['I']
-            next_V = row['V']
-            print('set IV')
+            print("initial per step call")
+            yield from per_step(all_dets, "primary")
+            next_I = row["I"]
+            next_V = row["V"]
+            print("set IV")
             if next_I != last_I:
                 yield from bps.mv(flash_power.current_sp, next_I)
                 last_I = next_I
             if next_V != last_V:
                 yield from bps.mv(flash_power.voltage_sp, next_V)
-                last_V = next_V                
-            print('finsh setting IV')
+                last_V = next_V
+            print("finsh setting IV")
             deadline = time.monotonic() + tau
-            yield from _inner_loop(all_dets, exposure_count,
-                                   delay, deadline, per_step,
-                                   'primary')
-            print('finished inner loop call')
+            yield from _inner_loop(
+                all_dets, exposure_count, delay, deadline, per_step, "primary"
+            )
+            print("finished inner loop call")
 
-        print('final shot')
+        print("final shot")
         # take a measurement on the way out
-        yield from per_step(all_dets, 'primary')
+        yield from per_step(all_dets, "primary")
 
-        print('turning off')
+        print("turning off")
         # turn it off!
         # there are several other places we turn this off, but better safe
         yield from bps.mv(flash_power.enabled, 0)
@@ -416,20 +430,26 @@ def flash_step(VIT_table, total_exposure, md, *,
     yield from _configure_area_det(total_exposure)
     plan = flash_step_field_inner()
     if control_shutter:
-        return (yield from bpp.plan_mutator(
-                    plan, inner_shutter_control))
+        return (yield from bpp.plan_mutator(plan, inner_shutter_control))
     else:
         return (yield from plan)
 
 
-def flash_ramp(start_I, stop_I, ramp_rate, voltage,
-               total_exposure,
-               md,
-               *,
-               dets=None,
-               delay=1, mm_mode='Current',
-               hold_time=0,
-               per_step=bps.trigger_and_read, control_shutter=True):
+def flash_ramp(
+    start_I,
+    stop_I,
+    ramp_rate,
+    voltage,
+    total_exposure,
+    md,
+    *,
+    dets=None,
+    delay=1,
+    mm_mode="Current",
+    hold_time=0,
+    per_step=bps.trigger_and_read,
+    control_shutter=True,
+):
     """
     Run a current ramp
 
@@ -491,11 +511,12 @@ def flash_ramp(start_I, stop_I, ramp_rate, voltage,
         defaults to True
     """
     if dets is None:
-        dets = [xpd_configuration['area_det']]
+        dets = [xpd_configuration["area_det"]]
     if total_exposure > delay:
         raise RuntimeError(
             f"You asked for total_exposure={total_exposure} "
-            f"with a delay of delay={delay} which is less ")
+            f"with a delay of delay={delay} which is less "
+        )
     # mA -> A
     start_I = start_I / 1000
     stop_I = stop_I / 1000
@@ -506,17 +527,21 @@ def flash_ramp(start_I, stop_I, ramp_rate, voltage,
     all_dets = dets + [flash_power, eurotherm]
     monitor_during = yield from _setup_mm(mm_mode)
 
-    expected_time = abs((stop_I - start_I) / (ramp_rate/(fudge_factor*60*1000)))
-    exposure_count = int(max(1,  expected_time // delay))
+    expected_time = abs((stop_I - start_I) / (ramp_rate / (fudge_factor * 60 * 1000)))
+    exposure_count = int(max(1, expected_time // delay))
 
-    md.setdefault('hints', {})
-    md['hints'].setdefault('dimensions', [(('time',), 'primary')])
-    md['plan_name'] = 'flash_ramp'
-    md['plan_args'] = {'start_I': start_I, 'stop_I': stop_I,
-                       'ramp_rate': ramp_rate, 'voltage': voltage,
-                       'delay': delay,
-                       'total_exposure': total_exposure}
-    md['detectors'] = [det.name for det in dets]
+    md.setdefault("hints", {})
+    md["hints"].setdefault("dimensions", [(("time",), "primary")])
+    md["plan_name"] = "flash_ramp"
+    md["plan_args"] = {
+        "start_I": start_I,
+        "stop_I": stop_I,
+        "ramp_rate": ramp_rate,
+        "voltage": voltage,
+        "delay": delay,
+        "total_exposure": total_exposure,
+    }
+    md["detectors"] = [det.name for det in dets]
 
     @subs_decorator(bec)
     # paranoia to be very sure we turn the PSU off
@@ -529,56 +554,68 @@ def flash_ramp(start_I, stop_I, ramp_rate, voltage,
     @run_decorator(md=md)
     def flash_ramp_inner():
         # set everything to zero at the top
-        yield from bps.mv(flash_power.current_sp, 0,
-                          flash_power.voltage_sp, 0,
-                          flash_power.ramp_rate, ramp_rate)
+        yield from bps.mv(
+            flash_power.current_sp,
+            0,
+            flash_power.voltage_sp,
+            0,
+            flash_power.ramp_rate,
+            ramp_rate,
+        )
         # put in "Duty Cycle" mode so current changes immediately
-        yield from bps.mv(flash_power.mode, 'Duty-Cycle')
+        yield from bps.mv(flash_power.mode, "Duty-Cycle")
         # take one shot on the way in
-        yield from per_step(all_dets, 'primary')
+        yield from per_step(all_dets, "primary")
         # turn it on!
         yield from bps.mv(flash_power.enabled, 1)
 
         # TODO
         # what voltage limit to start with ?!
-        yield from bps.mv(flash_power.current_sp, start_I,
-                          flash_power.voltage_sp, voltage)
+        yield from bps.mv(
+            flash_power.current_sp, start_I, flash_power.voltage_sp, voltage
+        )
         # put in "Current Ramp" to start the ramp
-        yield from bps.mv(flash_power.mode, 'Current Ramping')
+        yield from bps.mv(flash_power.mode, "Current Ramping")
         # set the target to let it go
         gid = short_uid()
-        yield from bps.abs_set(flash_power.current_sp, stop_I,
-                               group=gid)
+        yield from bps.abs_set(flash_power.current_sp, stop_I, group=gid)
         yield from bps.mv(flash_power.voltage_sp, voltage)
-        
 
-        yield from _inner_loop(all_dets, exposure_count, delay,
-                               time.monotonic() + expected_time * 1.1,
-                               per_step, 'primary',
-                               done_signal=flash_power.ramp_done)
+        yield from _inner_loop(
+            all_dets,
+            exposure_count,
+            delay,
+            time.monotonic() + expected_time * 1.1,
+            per_step,
+            "primary",
+            done_signal=flash_power.ramp_done,
+        )
 
         if hold_time > 0:
-            yield from _inner_loop(all_dets,
-                                   int(max(1, hold_time // delay)),
-                                   delay,
-                                   time.monotonic() + hold_time,
-                                   per_step, 'primary')
-        
+            yield from _inner_loop(
+                all_dets,
+                int(max(1, hold_time // delay)),
+                delay,
+                time.monotonic() + hold_time,
+                per_step,
+                "primary",
+            )
+
         # take one shot on the way out
-        yield from per_step(all_dets, 'primary')
+        yield from per_step(all_dets, "primary")
         yield from bps.wait(gid)
         # turn it off!
         # there are several other places we turn this off, but better safe
         yield from bps.mv(flash_power.enabled, 0)
-        
+
     # HACK to get at global state
-    yield from _configure_area_det(total_exposure)        
+    yield from _configure_area_det(total_exposure)
     plan = flash_ramp_inner()
     if control_shutter:
-        return (yield from bpp.plan_mutator(
-                    plan, inner_shutter_control))
+        return (yield from bpp.plan_mutator(plan, inner_shutter_control))
     else:
         return (yield from plan)
+
 
 def sawtooth_factory(motor, start, stop, step_size):
     """Generate a per-step function that move the motor in a sawtooth

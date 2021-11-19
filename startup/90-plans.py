@@ -1,9 +1,8 @@
 import os
 import numpy as np
-from bluesky.plan_stubs import (abs_set, )
-from bluesky.plans import (scan, count, list_scan, adaptive_scan)
-from bluesky.preprocessors import (subs_wrapper, pchain,
-                                   reset_positions_wrapper)
+from bluesky.plan_stubs import abs_set
+from bluesky.plans import scan, count, list_scan, adaptive_scan
+from bluesky.preprocessors import subs_wrapper, pchain, reset_positions_wrapper
 from bluesky.callbacks import LiveTable, LivePlot, LiveFit, LiveFitPlot
 from bluesky.plan_tools import print_summary
 
@@ -38,8 +37,10 @@ def MED(init_gas, other_gas, minT, maxT, num_steps, num_steady, num_trans, num_l
     yield from abs_set(gas, init_gas)
     # Steps 2 and 3 in a loop.
     for _ in range(num_loops):
-        yield from subs_wrapper(scan([pe1, gas.current_gas], eurotherm, minT, maxT, num_steps),
-                            LiveTable([eurotherm, gas.current_gas]))
+        yield from subs_wrapper(
+            scan([pe1, gas.current_gas], eurotherm, minT, maxT, num_steps),
+            LiveTable([eurotherm, gas.current_gas]),
+        )
         yield from subs_wrapper(count([pe1], num_steady), LiveTable([]))
     # Step 4
     yield from abs_set(gas, other_gas)
@@ -47,4 +48,3 @@ def MED(init_gas, other_gas, minT, maxT, num_steps, num_steady, num_trans, num_l
     # Step 6
     yield from abs_set(gas, init_gas)
     yield from subs_wrapper(count([pe1], num_steady), LiveTable([]))
-
