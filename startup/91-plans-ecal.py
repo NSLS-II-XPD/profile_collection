@@ -1,3 +1,9 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import bluesky.plan_stubs as bps
+import bluesky.plans as bp
+import bluesky.preprocessors as bpp
+from bluesky.callbacks.mpl_plotting import LivePlot
 from lmfit import Model, Parameter, Parameters
 from lmfit.lineshapes import voigt
 
@@ -40,6 +46,7 @@ D_SPACINGS = {
     "LaB6": np.array([4.15772, 2.94676, 2.40116]),
     "Si": 5.43095 / np.array([np.sqrt(3), np.sqrt(8), np.sqrt(11), np.sqrt(27)]),
 }
+
 
 # Helper functions
 def peakfunc(x, amplitude, sigma, x0, slope, intercept):
@@ -178,7 +185,6 @@ def Ecal(
             Defaults to "Si"
         detector_name : str, optional
             the name of the detector
-        
         theta_offset : float, optional
             the offset of theta zero estimated from the sample
         nsigma_fine : float, optional

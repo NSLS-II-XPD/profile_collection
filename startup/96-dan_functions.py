@@ -1,3 +1,7 @@
+import matplotlib.pyplot as plt
+import numpy as np
+
+
 def show_me(my_im, per_low=1, per_high=99, use_colorbar=False):
     my_low = np.percentile(my_im, per_low)
     my_high = np.percentile(my_im, per_high)
@@ -90,7 +94,7 @@ def plot_xline(my_id, *argv, use_offset=0, use_alpha=1, use_cmap="viridis"):
     try:
         arg_len = len(*argv)
         plot_mode = "typea"
-    except:
+    except Exception:
         arg_len = len(argv)
         plot_mode = "typeb"
 
@@ -120,7 +124,7 @@ def plot_yline(my_id, *argv, use_offset=0, use_alpha=1, use_cmap="viridis"):
     try:
         arg_len = len(*argv)
         plot_mode = "typea"
-    except:
+    except Exception:
         arg_len = len(argv)
         plot_mode = "typeb"
 

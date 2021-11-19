@@ -1,4 +1,4 @@
-from ophyd import EpicsSignalRO, Device
+from ophyd import EpicsSignal, Device
 from ophyd import Component as Cpt, DerivedSignal
 
 

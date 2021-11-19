@@ -13,7 +13,7 @@ from xpdacq.beamtime import (
 )
 from xpdacq.xpdacq_conf import xpd_configuration
 
-####  Plan to run Gas/RGA2 over xpdacq protocols of samples ########
+# ###  Plan to run Gas/RGA2 over xpdacq protocols of samples ########
 
 gas.gas_list = ["He", "N2", "CO2", "Air"]  # gas is set during the startup
 default_mass_list = ["mass1", "mass2", "mass3", "mass4", "mass5", "mass6"]
@@ -66,10 +66,10 @@ def Tramp_gas_plan(
     >>> plan = Tramp_gas_plan([pe1c, rga], 'He', 5, 300, 350, 5)
     >>> xrun(<sample ind>, plan)
     """
-    ## configure hints on gas device
+    # # configure hints on gas device
     configure_gas_mass_hint(rga_masses)
 
-    ## switch gas
+    # # switch gas
     yield from set_gas(gas_in)
 
     # configure the exposure time first

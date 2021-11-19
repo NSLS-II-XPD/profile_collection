@@ -4,6 +4,8 @@ from lmfit.models import VoigtModel, LinearModel
 from scipy.signal import argrelmax
 import matplotlib.pyplot as plt
 
+from bluesky.callbacks import CollectThenCompute
+
 
 def lamda_from_bragg(th, d, n):
     return 2 * d * np.sin(th / 2.0) / n
@@ -99,9 +101,6 @@ def get_wavelength_from_std_tth(x, y, d_spacings, ns, plot=False):
             tth = np.deg2rad(np.abs(peak_center))
             wavelengths.append(lamda_from_bragg(tth, d, n))
     return np.average(wavelengths), np.std(wavelengths), np.median(offset)
-
-
-from bluesky.callbacks import CollectThenCompute
 
 
 class ComputeWavelength(CollectThenCompute):

@@ -15,7 +15,11 @@ nslsii.configure_base(
 )
 
 # IMPORTANT : This is needed to read old data
-db.reg.set_root_map({"/direct/XF28ID1": "/direct/XF28ID2"})
+try:
+    # we need this on v0 databroker, but baked into configuration of v1, v2
+    db.reg.set_root_map({"/direct/XF28ID1": "/direct/XF28ID2"})
+except AttributeError:
+    pass
 
 # At the end of every run, verify that files were saved and
 # print a confirmation message.

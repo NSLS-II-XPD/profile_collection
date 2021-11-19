@@ -5,6 +5,8 @@ from ophyd import Component as C
 from ophyd import Component as Cpt
 from ophyd.device import DeviceStatus
 
+import numpy as np
+
 
 class CS700TemperatureController(PVPositioner):
     readback = C(EpicsSignalRO, "T-I")

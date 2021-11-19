@@ -1,4 +1,5 @@
 from nslsii.ad33 import QuadEMV33
+from ophyd import Kind
 
 
 class XPDQuadEM(QuadEMV33):

@@ -1,26 +1,27 @@
+import os
 import time as ttime
-from copy import deepcopy
+
+import ophyd
 from ophyd.areadetector import (
     PerkinElmerDetector,
     ImagePlugin,
     TIFFPlugin,
-    StatsPlugin,
     HDF5Plugin,
     ProcessPlugin,
     ROIPlugin,
 )
-from ophyd.device import BlueskyInterface
+from ophyd.device import BlueskyInterface, Device
 from ophyd.areadetector.trigger_mixins import SingleTrigger, MultiTrigger
+from ophyd.epics_motor import EpicsMotor
 from nslsii.ad33 import SingleTriggerV33, StatsPluginV33
 from ophyd.areadetector.filestore_mixins import (
     FileStoreIterativeWrite,
     FileStoreHDF5IterativeWrite,
     FileStoreTIFFSquashing,
-    FileStoreTIFF,
 )
 from ophyd import Signal, EpicsSignal, EpicsSignalRO  # Tim test
 from ophyd import Component as C
-from ophyd import StatusBase
+from ophyd.status import DeviceStatus
 
 
 # monkey patch for trailing slash problem
@@ -284,7 +285,7 @@ class PerkinElmerContinuousStage(PerkinElmerContinuous):
     stage_tries = 6
 
     def stage(self):
-        for i in range(stage_tries):
+        for i in range(self.stage_tries):
             try:
                 super().stage()
             except TimeoutError as e:
@@ -293,7 +294,7 @@ class PerkinElmerContinuousStage(PerkinElmerContinuous):
                 print(e)
 
     def unstage(self):
-        for i in range(stage_tries):
+        for i in range(self.stage_tries):
             try:
                 super().unstage()
             except TimeoutError as e:

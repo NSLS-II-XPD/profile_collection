@@ -1,5 +1,5 @@
-### This plan is named 9999-* to have it after 999-load.py where xpdacq is configured ####
-###  Created by Sanjit Ghose 28th Aug, 2017 during new BS/xpdAcq/an upgrades ########
+# ## This plan is named 9999-* to have it after 999-load.py where xpdacq is configured ####
+# ##  Created by Sanjit Ghose 28th Aug, 2017 during new BS/xpdAcq/an upgrades ########
 
 from xpdacq.beamtime import _configure_area_det
 import os
@@ -14,7 +14,7 @@ from bluesky.preprocessors import subs_wrapper, reset_positions_wrapper
 from bluesky.callbacks import LiveTable, LivePlot
 from bluesky.plan_tools import print_summary
 
-####  Plan to run Gas/RGA2 over xpdacq protocols of samples ########
+# ###  Plan to run Gas/RGA2 over xpdacq protocols of samples ########
 
 gas.gas_list = ["He", "N2", "CO2", "Air"]
 
@@ -42,10 +42,10 @@ def gas_plan(gas_in, rga_masses=["mass1", "mass2", "mass3", "mass4", "mass5", "m
     for m in rga_masses:
         getattr(rga, m).kind = "hinted"
 
-    ## switch gas
+    # # switch gas
     yield from bps.mv(gas, gas_in)
 
-    ## ScanPlan you need
+    # # ScanPlan you need
     yield from bp.count([gas.current_gas, rga])
 
 
@@ -90,13 +90,13 @@ def gas_plan_with_detector(
     det.stats1.kind = "hinted"
     det.stats1.total.kind = "hinted"
 
-    ## switch gas
+    # # switch gas
     yield from bps.mv(gas, gas_in)
 
     # configure the exposure time first
     _configure_area_det(exp_time)  # secs of exposure time
 
-    ## ScanPlan you need
+    # # ScanPlan you need
     yield from bp.count([gas.current_gas, rga, det], num=num_exp, delay=delay)
 
 

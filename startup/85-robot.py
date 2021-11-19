@@ -1,15 +1,13 @@
 import asyncio
 from ophyd import Device, EpicsSignal, EpicsSignalRO
-from ophyd import Component as C
 from ophyd.utils import set_and_wait
 from bluesky import Msg
 from bluesky.plans import count, list_scan
-from bluesky.plan_stubs import abs_set, open_run, close_run
 from bluesky.utils import single_gen
-from bluesky.preprocessors import subs_wrapper, pchain
+from bluesky.preprocessors import subs_wrapper
 from bluesky.callbacks import LiveTable
-from bluesky import Msg
-
+from ophyd.device import Component as Cpt
+import bluesky.plans as bp
 
 SAMPLE_GEOMETRY_NULL = "~~NULL_GEO~~"
 
@@ -46,11 +44,15 @@ class Robot(Device):
         super().__init__(*args, **kwargs)
 
     def _poll_until_idle(self):
+        import time
+
         time.sleep(3)  # give it plenty of time to start
         while self.status.get() != "Idle":
             time.sleep(0.1)
 
     def _poll_until_sample_cleared(self):
+        import time
+
         while self.current_sample_number.get() != 0:
             time.sleep(0.1)
 

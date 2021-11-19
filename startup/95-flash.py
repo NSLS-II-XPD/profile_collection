@@ -1,4 +1,5 @@
-from ophyd import Device, Component as Cpt, EpicsSignal, EpicsSignalRO, Signal
+import numpy as np
+from ophyd import Device, Component as Cpt, EpicsSignal, EpicsSignalRO
 from bluesky.preprocessors import (
     run_decorator,
     stage_decorator,
@@ -6,19 +7,19 @@ from bluesky.preprocessors import (
     monitor_during_decorator,
 )
 
-import bluesky.plan_stubs as bps
 from bluesky.utils import short_uid
 import pandas as pd
 import time
 import itertools
 from bluesky.preprocessors import subs_decorator
 
-#### Funtions for tseries type run with shuuter control and triggering other Ophyd Devices
+# ### Funtions for tseries type run with shuuter control and triggering other Ophyd Devices
 from xpdacq.beamtime import open_shutter_stub, close_shutter_stub
 
-import bluesky.plans as bp
+
 import bluesky.plan_stubs as bps
 import bluesky.preprocessors as bpp
+from xpdacq.beamtime import _configure_area_det
 
 
 def inner_shutter_control(msg):

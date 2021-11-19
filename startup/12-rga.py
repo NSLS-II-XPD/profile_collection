@@ -1,5 +1,6 @@
-### This is RGA:2 configured for ExQ new RGA connected at 10.28.2.142 #####
+# ## This is RGA:2 configured for ExQ new RGA connected at 10.28.2.142 #####
 from ophyd import Device, Component as Cpt
+from ophyd.signal import EpicsSignal, EpicsSignalRO
 
 
 class RGA(Device):
@@ -16,7 +17,7 @@ class RGA(Device):
     mass9 = Cpt(EpicsSignalRO, "P:MID9-I")
 
 
-## We don't want the RGA to start and stop by any bluseky plan###
+# # We don't want the RGA to start and stop by any bluseky plan###
 
 """
     def stage(self):
