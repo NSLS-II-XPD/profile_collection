@@ -1,0 +1,3 @@
+[submodule "ae-gpcam"]
+	path = ae-gpcam
+	url = https://github.com/NSLS-II-XPD/ae-gpcam.git
