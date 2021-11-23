@@ -22,6 +22,8 @@ from xpdacq.xpdacq_conf import (
     _load_beamline_config,
 )
 
+from ae_gpcam.run_engine import XrunStandardSignature
+
 # configure experiment device being used in current version
 if glbl_dict["is_simulation"]:
     from xpdacq.simulation import xpd_pe1c, db, cs700, shctl1, ring_current, fb
@@ -90,3 +92,10 @@ from xpdacq.calib import *
 
 print("OK, ready to go.  To continue, follow the steps in the xpdAcq")
 print("documentation at http://xpdacq.github.io/xpdacq\n")
+
+RE = XrunStandardSignature(None)
+RE.md.update(xrun.md)
+# insert header to db, either simulated or real
+RE.subscribe(db.insert, "all")
+RE.beamtime = bt
+RE.clear_suspenders()
