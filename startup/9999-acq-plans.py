@@ -52,7 +52,7 @@ def gas_plan(gas_in, rga_masses=["mass1", "mass2", "mass3", "mass4", "mass5", "m
 def gas_plan_with_detector(
     gas_in,
     rga_masses=["mass1", "mass2", "mass3", "mass4", "mass5", "mass6"],
-    det=pe1c,
+    det=None,
     exp_time=5,
     num_exp=1,
     delay=1,
@@ -79,6 +79,8 @@ def gas_plan_with_detector(
     delay : float, optional
         delay between exposures in seconds
     """
+    if det is None:
+        det = pe1c
     print("Warning: check the gas list!")
 
     for i in range(1, 9 + 1):

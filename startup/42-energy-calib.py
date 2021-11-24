@@ -1,4 +1,3 @@
-from __future__ import division, print_function
 import numpy as np
 from lmfit.models import VoigtModel, LinearModel
 from scipy.signal import argrelmax

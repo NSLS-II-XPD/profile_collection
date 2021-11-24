@@ -104,7 +104,7 @@ def Tramp_gas_plan(
 
 
 def tseries_gas_plan(
-    detectors, gas_in, exp_time, delay=1, num_exp=1, rga_masses=default_mass_list
+    detectors, gas_in, exp_time, delay=1, num_exp=1, rga_masses=None
 ):
     """
     tseries-type scan with rga gas reading
@@ -129,6 +129,8 @@ def tseries_gas_plan(
     >>> plan = tseries_gas_plan([pe1c, rga], 'He', 5, 10, 2)
     >>> xrun(<sample ind>, plan)
     """
+    if rga_masses is None:
+        rga_masses = default_mass_list
     ## configure hints on gas device
     configure_gas_mass_hint(rga_masses)
 

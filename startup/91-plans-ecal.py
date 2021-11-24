@@ -147,8 +147,8 @@ def wavelength_from_theta(theta, d):
 # New calibration scan plan
 def Ecal(
     wguess,
-    detectors=[sc],
-    motor=th_cal,
+    detectors=None,
+    motor=None,
     coarse_step=0.0012,
     coarse_nsteps=120,
     D="Si",
@@ -202,6 +202,11 @@ def Ecal(
         -------
 
     """
+    if detectors is None:
+        detectors = [sc]
+    if motor is None:
+        motor = th_cal
+    
     # an object for passing messages
     global myresult
     factors = dict(th=1, tth=2)

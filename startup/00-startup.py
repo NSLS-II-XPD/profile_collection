@@ -14,6 +14,10 @@ nslsii.configure_base(
     epics_context=False,
 )
 
+del one_shot
+del one_1d_step
+del one_nd_step
+
 # IMPORTANT : This is needed to read old data
 try:
     # we need this on v0 databroker, but baked into configuration of v1, v2

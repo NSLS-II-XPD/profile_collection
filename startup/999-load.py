@@ -14,6 +14,7 @@
 #
 ##############################################################################
 import os
+import yaml
 from xpdacq.xpdacq_conf import (
     glbl_dict,
     configure_device,
@@ -54,8 +55,10 @@ if reload_glbl_dict is not None:
     _set_glbl(glbl, reload_glbl_dict)
 
 # import necessary modules
-from xpdacq.xpdacq import *
-from xpdacq.beamtime import *
+# from xpdacq.xpdacq import *
+# from xpdacq.beamtime import *
+from xpdacq.xpdacq import CustomizedRunEngine
+
 from xpdacq.utils import import_sample_info
 
 # instantiate xrun without beamtime, like bluesky setup
@@ -63,7 +66,9 @@ xrun = CustomizedRunEngine(None)
 xrun.md["beamline_id"] = glbl["beamline_id"]
 xrun.md["group"] = glbl["group"]
 xrun.md["facility"] = glbl["facility"]
-beamline_config = _load_beamline_config(glbl["blconfig_path"])
+with open(glbl["blconfig_path"], "r") as f:
+    beamline_config = yaml.unsafe_load(f)
+
 xrun.md["beamline_config"] = beamline_config
 
 # insert header to db, either simulated or real
@@ -85,7 +90,7 @@ if os.path.isdir(HOME_DIR):
 else:
     os.chdir(BASE_DIR)
 
-from xpdacq.calib import *
+# from xpdacq.calib import *
 
 # analysis functions, only at beamline
 # from xpdan.data_reduction import *
