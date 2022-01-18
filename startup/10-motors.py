@@ -17,6 +17,8 @@ ss_stg2_z = EpicsMotor('XF:28IDC-ES:1{Stg:Smpl2-Ax:Z}Mtr', name='ss_stg2_z')
 
 # long travel sample stage 
 sample_x = EpicsMotor('XF:28IDC-ES:1{SampArray-Ax:X}Mtr', name='sample_x')
+sample_y = EpicsMotor('XF:28IDC-ES:1{SampArray-Ax:Y}Mtr', name='sample_y')
+
 
 # Sample stage stack axes
 ss_fine_x = EpicsMotor('XF:28IDD-ES:2{Stg:Stack-Ax:Xfine}Mtr', name='ss_fine_x')
