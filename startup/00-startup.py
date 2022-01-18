@@ -7,9 +7,6 @@ import nslsii
 nslsii.configure_base(get_ipython().user_ns, 'xpd', pbar=True, bec=True,
                       magics=True, mpl=True, epics_context=False)
 
-# IMPORTANT : This is needed to read old data
-db.reg.set_root_map({'/direct/XF28ID1':'/direct/XF28ID2'})
-
 # At the end of every run, verify that files were saved and
 # print a confirmation message.
 from bluesky.callbacks.broker import verify_files_saved, post_run
