@@ -624,7 +624,7 @@ def show_layout(strip_list, ax=None, *, cell_size=4.5):
     ax.set_aspect("equal")
 
 
-if True:
+if False:
     import matplotlib.pyplot as plt
 
     fig, ax = plt.subplots()
