@@ -11,7 +11,7 @@ class CS700TemperatureController(PVPositioner):
     setpoint = C(EpicsSignal, 'T-SP')
     done = C(EpicsSignalRO, 'Cmd-Busy')
     stop_signal = C(EpicsSignal, 'Cmd-Cmd')
-
+    targettemp = C(EpicsSignalRO, 'T:Target-I')
     def set(self, *args, timeout=None, **kwargs):
         return super().set(*args, timeout=timeout, **kwargs)
 
@@ -28,12 +28,14 @@ class CS700TemperatureController(PVPositioner):
 cs700 = CS700TemperatureController('XF:28IDC-ES:1{Env:01}', name='cs700',
                                    settle_time=0)
 cs700.done_value = 0
-cs700.read_attrs = ['setpoint', 'readback']
+cs700.read_attrs = ['setpoint', 'readback','targettemp']
 cs700.readback.name = 'temperature'
 cs700.setpoint.name = 'temperature_setpoint'
+cs700.targettemp.name = 'temperature_target'
 
-
+'''
 class Eurotherm(EpicsSignalPositioner):
+
     def set(self, *args, **kwargs):
         # override #@!$(#$ hard-coded timeouts
         return super().set(*args, timeout=1000000, **kwargs)
@@ -41,11 +43,50 @@ class Eurotherm(EpicsSignalPositioner):
 eurotherm = Eurotherm('XF:28IDC-ES:1{Env:04}T-I',
                                  write_pv='XF:28IDC-ES:1{Env:04}T-SP',
                                  tolerance= 1, name='eurotherm')
+                                 
+eurotherm_power = Eurotherm('XF:28IDC-ES:1{Env:04}Out-I',
+                                 write_pv='XF:28IDC-ES:1{Env:04}Out-SP',
+                                 tolerance= 1, name='eurotherm_power')
+                                 
+eurotherm_mode = Eurotherm('XF:28IDC-ES:1{Env:04}Mode:Man-Sts',
+                                 write_pv='XF:28IDC-ES:1{Env:04}Mode:Man-Cmd',
+                                 tolerance= 1, name='eurotherm_mode')
+'''
+
+class Eurotherm(Device):
+    temperature = Cpt(
+        EpicsSignalPositioner,
+        'T-I',
+        write_pv='T-SP',
+        tolerance=1,
+        #write_timeout=1000000
+    )
+    power = Cpt(
+        EpicsSignalPositioner,
+        'Out-I',
+        write_pv='Out-SP',
+        tolerance=1,
+        #write_timeout=1000
+    )
+    mode = Cpt(
+        EpicsSignal,
+        'Mode:Man-Sts',
+        write_pv='Mode:Man-Cmd',
+        kind='config',
+        string=True
+    )
+
+eurotherm = Eurotherm('XF:28IDC-ES:1{Env:04}', name='eurotherm')
+
+hotairblower = Eurotherm('XF:28IDC-ES:1{Env:03}', name='hotairblower')
+
+'''
 
 #hot air blower , add by Hui and Jianming
 hotairblower=Eurotherm('XF:28IDC-ES:1{Env:03}T-I',
                                  write_pv='XF:28IDC-ES:1{Env:03}T-SP',
                                  tolerance= 1, name='hotairblower')
+'''
 
 class CryoStat(Device):
     # readback
@@ -112,7 +153,7 @@ class CryoStat(Device):
         self.scan.put('Passive', wait=True)
 
 
-cryostat = CryoStat('XF:28IDC_ES1:LS335:{CryoStat}', name='cryostat', dead_band=1)
+cryostat = CryoStat('XF:28IDC-ES1:LS335:{CryoStat}', name='cryostat', dead_band=1)
 
 
 # TODO : PV needs to be fixed for done signal

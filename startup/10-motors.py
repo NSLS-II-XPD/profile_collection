@@ -17,6 +17,8 @@ ss_stg2_z = EpicsMotor('XF:28IDC-ES:1{Stg:Smpl2-Ax:Z}Mtr', name='ss_stg2_z')
 
 # long travel sample stage 
 sample_x = EpicsMotor('XF:28IDC-ES:1{SampArray-Ax:X}Mtr', name='sample_x')
+sample_y = EpicsMotor('XF:28IDC-ES:1{SampArray-Ax:Y}Mtr', name='sample_y')
+
 
 # Sample stage stack axes
 ss_fine_x = EpicsMotor('XF:28IDD-ES:2{Stg:Stack-Ax:Xfine}Mtr', name='ss_fine_x')
@@ -39,6 +41,11 @@ hrm_r = EpicsMotor('XF:28IDC-OP:1{Mono:HRM-Ax:R}Mtr', name='hrm_r')
 # PE detector motions
 pe1_x = EpicsMotor('XF:28IDC-ES:1{Det:PE1-Ax:X}Mtr', name='pe1_x')
 pe1_z = EpicsMotor('XF:28IDC-ES:1{Det:PE1-Ax:Z}Mtr', name='pe1_z')
+
+
+# MAD motions
+mad_pitch=EpicsMotor('XF:28IDC-ES:1{MAD:DMS-Ax:Pitch}Mtr', name='mad_pitch')
+
 
 shctl1 = EpicsMotor('XF:28IDC-ES:1{Sh2:Exp-Ax:5}Mtr', name='shctl1')
 fs = shctl1 #added by dan

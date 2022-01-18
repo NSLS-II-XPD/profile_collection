@@ -263,9 +263,9 @@ def scan_shifter_pos(motor, xmin, xmax, numx, num_samples=0, min_height=.02, min
         print ("and min_dist [index values/real vals] of "+str(tmin_dist)+' / '+str(tmin_dist*delx))
         print ("and I'll fit a radius between each peak-center of "+str(tpeak_rad)) 
         if fit_attempts == 0:
-            go_on, peak_cen_list = _identify_peaks_scan_shifter_pos(pos_list,I_list,num_samples=num_samples,min_height=tmin_height, min_dist = tmin_dist, peak_rad=tpeak_rad)    
+            go_on, peak_cen_list, ht_list = _identify_peaks_scan_shifter_pos(pos_list,I_list,num_samples=num_samples,min_height=tmin_height, min_dist = tmin_dist, peak_rad=tpeak_rad)    
         else:
-            go_on, peak_cen_list = _identify_peaks_scan_shifter_pos(pos_list,I_list,num_samples=num_samples,min_height=tmin_height, min_dist = tmin_dist, peak_rad=tpeak_rad,open_new_plot=False)    
+            go_on, peak_cen_list, ht_list = _identify_peaks_scan_shifter_pos(pos_list,I_list,num_samples=num_samples,min_height=tmin_height, min_dist = tmin_dist, peak_rad=tpeak_rad,open_new_plot=False)    
         fit_attempts += 1 
         #if yn_question("\nHappy with the fit? [y/n] ") == False:
         if go_on == False:
@@ -287,7 +287,7 @@ def scan_shifter_pos(motor, xmin, xmax, numx, num_samples=0, min_height=.02, min
             print ("Ok, great.")
             go_on = True     
 
-    return peak_cen_list
+    return peak_cen_list, ht_list
 
 
 def _identify_peaks_scan_shifter_pos(x,y,num_samples=0,min_height=.02, min_dist = 5, peak_rad=1.5,open_new_plot=True):
@@ -306,7 +306,7 @@ def _identify_peaks_scan_shifter_pos(x,y,num_samples=0,min_height=.02, min_dist 
         plt.pause(.01)
         
     yn_question = lambda q: input(q).lower().strip()[0] == "y" or False
-
+    ymax=y.max()
     y -= y.min()
     y /= y.max()
     print ('ymax is '+str(max(y)))
@@ -343,7 +343,7 @@ def _identify_peaks_scan_shifter_pos(x,y,num_samples=0,min_height=.02, min_dist 
     print ('done')
     plt.pause(.01)
     if yn_question("Go on? [y/n] ") == False:
-        return False, []
+        return False, [], []
     
     
     #now refine positions
@@ -351,7 +351,7 @@ def _identify_peaks_scan_shifter_pos(x,y,num_samples=0,min_height=.02, min_dist 
     peak_amp_guess_list = y[peaks]
 
     fit_peak_cen_list = np.zeros(len(peaks))
-    fit_peak_amp_list = np.zeros(len(peaks))
+    fit_peak_amp_list = np.zeros(len(peaks)) 
     fit_peak_bgd_list = np.zeros(len(peaks))
     fit_peak_wid_list = np.zeros(len(peaks))
 
@@ -376,19 +376,20 @@ def _identify_peaks_scan_shifter_pos(x,y,num_samples=0,min_height=.02, min_dist 
         fit_peak_wid_list[i] = popt[1]
         fit_peak_cen_list[i] = popt[0]
         fit_peak_bgd_list[i] = popt[3]
+#        ht_list=[x*ymax for x in fit_peak_amp_list]
         
     plt.show()
     plt.pause(.01) 
     
     #finally, return this as a numpy list
-    return True, fit_peak_cen_list[::-1] #return flipped
+    return True, fit_peak_cen_list[::-1], fit_peak_amp_list[::-1] #return flipped
 
 def _motor_move_scan_shifter_pos(motor, xmin, xmax, numx): 
     from epics import caget
     I_list = np.zeros(numx) 
     dx = (xmax-xmin)/numx 
     pos_list = np.linspace(xmin,xmax,numx) 
-    fs.set(60)
+    fs.set(0)
     fig1, ax1 = plt.subplots() 
     use_det = True # True = detector, False = photodiode
     for i, pos in enumerate(pos_list): 
@@ -409,7 +410,7 @@ def _motor_move_scan_shifter_pos(motor, xmin, xmax, numx):
     
     plt.plot(pos_list, I_list) 
     #plt.close()    
-    fs.set(0)
+    fs.set(-47)
     return pos_list, I_list 
 
 

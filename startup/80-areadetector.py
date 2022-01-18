@@ -36,7 +36,7 @@ ophyd.areadetector.filestore_mixins._ensure_trailing_slash = _ensure_trailing_sl
 # from shutter import sh1
 
 #shctl1 = EpicsSignal('XF:28IDC-ES:1{Det:PE1}cam1:ShutterMode', name='shctl1')
-shctl1 = EpicsMotor('XF:28IDC-ES:1{Sh2:Exp-Ax:5}Mtr', name='shctl1')
+shctl1 = EpicsMotor('XF:28IDC-ES:1{Sh2:Exp-Ax:5}Mtr', name='shctl1', settle_time=0.0)
 
 
 
@@ -149,7 +149,7 @@ class XPDPerkinElmer(PerkinElmerDetector):
              cam_name='cam',  # used to configure "tiff squashing"
              proc_name='proc',  # ditto
              read_attrs=[],
-             root='/nsls2/xf28id2/')
+             root='/nsls2/data/xpd/legacy/raw/')
 
     # hdf5 = C(XPDHDF5Plugin, 'HDF1:',
     #          write_path_template='G:/pe1_data/%Y/%m/%d/',
@@ -314,23 +314,22 @@ pe2c = PerkinElmerContinuous(pe2_pv_prefix, name='pe2',
 
 
 # PE2 detector configurations:
-pe3 = PerkinElmerStandardV33(pe3_pv_prefix, name='pe3', read_attrs=['tiff'])
-pe3m = PerkinElmerMulti(pe3_pv_prefix, name='pe3', read_attrs=['tiff'],
-                        trigger_cycle=[[('image', {shctl1: 1}),
-                                        ('dark_image', {shctl1: 0})]])
-pe3c = PerkinElmerContinuous(pe3_pv_prefix, name='pe3',
-                             read_attrs=['tiff', 'stats1.total'],
-                             plugin_name='tiff')
+# pe3 = PerkinElmerStandardV33(pe3_pv_prefix, name='pe3', read_attrs=['tiff'])
+# pe3m = PerkinElmerMulti(pe3_pv_prefix, name='pe3', read_attrs=['tiff'],
+#                         trigger_cycle=[[('image', {shctl1: 1}),
+#                                         ('dark_image', {shctl1: 0})]])
+# pe3c = PerkinElmerContinuous(pe3_pv_prefix, name='pe3',
+#                             read_attrs=['tiff', 'stats1.total'],
+#                              plugin_name='tiff')
 
 
 # Update read/write paths for all the detectors in once:
 for det in [
             pe1, pe1m, pe1c,
-            pe2, pe2m, pe2c,
-            pe3, pe3m, pe3c,
+            pe2, pe2m, pe2c
             ]:
-    det.tiff.read_path_template = f'/nsls2/xf28id2/{det.name}_data/%Y/%m/%d/'
-    det.tiff.write_path_template = f'G:\\{det.name}_data\\%Y\\%m\\%d\\'
+    det.tiff.read_path_template = f'/nsls2/data/xpd/legacy/raw/{det.name}_data/%Y/%m/%d/'
+    det.tiff.write_path_template = f'J:\\%Y\\%m\\%d\\'
     det.cam.bin_x.kind = 'config'
     det.cam.bin_y.kind = 'config'
     det.detector_type.kind = 'config'
