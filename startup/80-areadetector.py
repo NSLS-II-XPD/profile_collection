@@ -129,7 +129,17 @@ def take_dark(cam, light_field, dark_field_name):
     df_sig.stashed_datakey = desc[light_field]
 
 
-class XPDTIFFPlugin(TIFFPlugin, FileStoreTIFFSquashing,
+class XPDFileStoreTIFFSquashing(FileStoreTIFFSquashing):
+    def describe(self):
+        description = super().describe()
+        shape = list(description[f"{self.parent.name}_image"]["shape"])
+        shape[0] = self.get_frames_per_point()
+        shape = tuple(shape)
+        description[f"{self.parent.name}_image"]["shape"] = shape
+        return description
+
+
+class XPDTIFFPlugin(TIFFPlugin, XPDFileStoreTIFFSquashing,
                     FileStoreIterativeWrite):
     pass
 
@@ -288,6 +298,7 @@ class PerkinElmerContinuousStage(PerkinElmerContinuous):
 
 # PE1/2/3 PV prefixes in one place:
 pe1_pv_prefix = 'XF:28IDC-ES:1{Det:PE1}'
+#pe1_pv_prefix = 'XF:28IDC-ES:1{Det:PE2}'
 pe2_pv_prefix = 'XF:28IDC-ES:1{Det:PE2}'
 pe3_pv_prefix = 'XF:28IDD-ES:2{Det:PE3}'
 
