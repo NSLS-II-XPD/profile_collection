@@ -1,6 +1,8 @@
 # Make ophyd listen to pyepics.
 import nslsii
+import ophyd.signal
 
+ophyd.signal.EpicsSignal.set_defaults(connection_timeout=5)
 # See docstring for nslsii.configure_base() for more details
 # this command takes away much of the boilerplate for settting up a profile
 # (such as setting up best effort callbacks etc)

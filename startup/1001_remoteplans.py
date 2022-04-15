@@ -363,7 +363,7 @@ def xpd_flt_set(flt_p):
     else:
         fb.flt4.set('In') 
     
-    print('filter bank setting:', fb.flt1.value, fb.flt2.value, fb.flt3.value, fb.flt4.value)    
+    print('filter bank setting:', fb.flt1.get(), fb.flt2.get(), fb.flt3.get(), fb.flt4.get())    
 
     return None   
     

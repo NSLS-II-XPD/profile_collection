@@ -159,7 +159,7 @@ class XPDPerkinElmer(PerkinElmerDetector):
              cam_name='cam',  # used to configure "tiff squashing"
              proc_name='proc',  # ditto
              read_attrs=[],
-             root='/nsls2/data/xpd/legacy/raw/')
+             root='/nsls2/data/xpd-new/legacy/raw/')
 
     # hdf5 = C(XPDHDF5Plugin, 'HDF1:',
     #          write_path_template='G:/pe1_data/%Y/%m/%d/',
@@ -298,7 +298,7 @@ class PerkinElmerContinuousStage(PerkinElmerContinuous):
 
 # PE1/2/3 PV prefixes in one place:
 pe1_pv_prefix = 'XF:28IDC-ES:1{Det:PE1}'
-#pe1_pv_prefix = 'XF:28IDC-ES:1{Det:PE2}'
+#pe2_pv_prefix = 'XF:28IDC-ES:1{Det:PE1}'
 pe2_pv_prefix = 'XF:28IDC-ES:1{Det:PE2}'
 pe3_pv_prefix = 'XF:28IDD-ES:2{Det:PE3}'
 
@@ -339,7 +339,7 @@ for det in [
             pe1, pe1m, pe1c,
             pe2, pe2m, pe2c
             ]:
-    det.tiff.read_path_template = f'/nsls2/data/xpd/legacy/raw/{det.name}_data/%Y/%m/%d/'
+    det.tiff.read_path_template = f'/nsls2/data/xpd-new/legacy/raw/{det.name}_data/%Y/%m/%d/'
     det.tiff.write_path_template = f'J:\\%Y\\%m\\%d\\'
     det.cam.bin_x.kind = 'config'
     det.cam.bin_y.kind = 'config'

@@ -24,7 +24,8 @@ if glbl_dict['is_simulation']:
                                    ring_current, fb)
     pe1c = xpd_pe1c # alias
 
-configure_device(area_det=pe2c, shutter=shctl1,
+
+configure_device(area_det=pe1c, shutter=shctl1,
                  temp_controller=cs700, db=db,
                  filter_bank=fb,
                  ring_current=ring_current,
