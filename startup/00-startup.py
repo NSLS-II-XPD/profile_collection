@@ -7,7 +7,8 @@ ophyd.signal.EpicsSignal.set_defaults(connection_timeout=5)
 # this command takes away much of the boilerplate for settting up a profile
 # (such as setting up best effort callbacks etc)
 nslsii.configure_base(get_ipython().user_ns, 'xpd', pbar=True, bec=True,
-                      magics=True, mpl=True, epics_context=False)
+                      magics=True, mpl=True, epics_context=False,
+                      publish_documents_with_kafka=True)
 
 # At the end of every run, verify that files were saved and
 # print a confirmation message.
