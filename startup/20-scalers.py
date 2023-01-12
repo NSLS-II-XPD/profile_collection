@@ -1,5 +1,6 @@
 from ophyd import EpicsScaler
 from ophyd import EpicsSignalRO
+from ophyd import Component as C
 
 em = EpicsScaler('XF:28IDC-BI:1{IM:02}', name='em')
 em.channels.read_attrs = ['chan%d' % i for i in [22, 21, 20, 23]]
@@ -19,3 +20,5 @@ for ch_name in sc.channels.component_names:
 
 # ring current
 ring_current = EpicsSignalRO('SR:OPS-BI{DCCT:1}I:Real-I', name='ring_current')
+
+

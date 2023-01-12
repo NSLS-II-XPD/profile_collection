@@ -37,7 +37,9 @@ ophyd.areadetector.filestore_mixins._ensure_trailing_slash = _ensure_trailing_sl
 
 #shctl1 = EpicsSignal('XF:28IDC-ES:1{Det:PE1}cam1:ShutterMode', name='shctl1')
 shctl1 = EpicsMotor('XF:28IDC-ES:1{Sh2:Exp-Ax:5}Mtr', name='shctl1', settle_time=0.0)
-
+# this is a temporary fix for the fast shutter stao 09/13/2022
+from ophyd.utils import AlarmSeverity
+shctl1.tolerated_alarm = AlarmSeverity.MAJOR
 
 
 class XPDShutter(Device):

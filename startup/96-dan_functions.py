@@ -389,7 +389,9 @@ def _motor_move_scan_shifter_pos(motor, xmin, xmax, numx):
     I_list = np.zeros(numx) 
     dx = (xmax-xmin)/numx 
     pos_list = np.linspace(xmin,xmax,numx) 
-    fs.set(0)
+    motor.move(pos_list[0])
+    fs.set(-20)
+    time.sleep(0.5)
     fig1, ax1 = plt.subplots() 
     use_det = True # True = detector, False = photodiode
     for i, pos in enumerate(pos_list): 
@@ -410,7 +412,7 @@ def _motor_move_scan_shifter_pos(motor, xmin, xmax, numx):
     
     plt.plot(pos_list, I_list) 
     #plt.close()    
-    fs.set(-47)
+    fs.set(20)
     return pos_list, I_list 
 
 

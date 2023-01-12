@@ -33,6 +33,65 @@ cs700.readback.name = 'temperature'
 cs700.setpoint.name = 'temperature_setpoint'
 cs700.targettemp.name = 'temperature_target'
 
+
+class CS800TemperatureController(PVPositioner):
+    readback = C(EpicsSignalRO, ':TEMP')
+    setpoint = C(EpicsSignal, ':RTEMP')
+    done = C(EpicsSignalRO, ':PHASE', string=True) #0:ramp, 1:cool, 2:flat, 3:hold, 4:end, 5:purge
+    #stop_signal = C(EpicsSignal, ':STOP.PROC')
+    runmode = C(EpicsSignalRO, ':RUNMODE', string=True) #0:runup OK,  2:startup OK, 3:run, 5:shutdown Ok
+    #trigger signal
+    trig = Cpt(EpicsSignal,':RAMP.PROC')
+    coolsetpoint = C(EpicsSignal, ':CTEMP')
+    cooltrig = Cpt(EpicsSignal,':COOL.PROC')
+    #targettemp = C(EpicsSignalRO, 'T:Target-I')
+    def set(self, *args, timeout=None, **kwargs):
+        return super().set(*args, timeout=timeout, **kwargs)
+
+    def trigger(self):
+        # There is nothing to do. Just report that we are done.
+        # Note: This really should not necessary to do --
+        # future changes to PVPositioner may obviate this code.
+        self.trig.put(1, wait=True)
+        #status = DeviceStatus(self)
+        #status._finished()
+        return DeviceStatus(self, done = True, success=True)
+    
+    def moveto(self, position, timeout=None, move_cb=None, **kwargs):
+        if self.runmode.get()!='Shutdown OK':
+            self.setpoint.set(position, timeout=timeout, **kwargs)
+            self.trig.put(1, wait=True)
+            #wait 5 second to allow phaseID update after trigger
+            time.sleep(5)
+            while self.done.value != 'Hold':
+                time.sleep(0.1)
+            return DeviceStatus(self,done = True, success=True)
+        else:
+            raise ValueError('cs800 is shutdown mode, please restart it')
+
+    def coolto(self, position, timeout=None, move_cb=None, **kwargs):
+        if self.runmode.get()!='Shutdown OK':
+            self.coolsetpoint.set(position, timeout=timeout, **kwargs)
+            self.cooltrig.put(1, wait=True)
+            #wait 5 second to allow phaseID update after trigger
+            time.sleep(5)
+            while self.done.value != 'Hold':
+                time.sleep(0.1)
+            return DeviceStatus(self,done = True, success=True)
+        else:
+            raise ValueError('cs800 is shutdown mode, please restart it')
+
+
+# To allow for sample temperature equilibration time, increase
+# the `settle_time` parameter (units: seconds).
+cs800 = CS800TemperatureController('XF:28IDC-ES:1{CS:800}', name='cs800',
+                                   settle_time=0)
+cs800.done_value = 'Hold'
+cs800.read_attrs = ['setpoint', 'readback']
+cs800.readback.name = 'temperature'
+cs800.setpoint.name = 'temperature_setpoint'
+
+
 '''
 class Eurotherm(EpicsSignalPositioner):
 
@@ -75,6 +134,12 @@ class Eurotherm(Device):
         kind='config',
         string=True
     )
+    ramprate = Cpt(
+        EpicsSignalPositioner,
+        'Rate:Ramp-RB',
+        write_pv='Rate:Ramp-SP',
+        tolerance=1
+    )
 
 eurotherm = Eurotherm('XF:28IDC-ES:1{Env:04}', name='eurotherm')
 
@@ -86,8 +151,8 @@ hotairblower = Eurotherm('XF:28IDC-ES:1{Env:03}', name='hotairblower')
 hotairblower=Eurotherm('XF:28IDC-ES:1{Env:03}T-I',
                                  write_pv='XF:28IDC-ES:1{Env:03}T-SP',
                                  tolerance= 1, name='hotairblower')
-'''
 
+'''
 class CryoStat(Device):
     # readback
     T = Cpt(EpicsSignalRO, ':IN1')
@@ -189,3 +254,4 @@ linkam_furnace.setpoint.kind = "normal"
 linkam_furnace.readback.kind = "normal"
 linkam_furnace.readback.name = 'temperature'
 linkam_furnace.setpoint.name = 'temperature_setpoint'
+
