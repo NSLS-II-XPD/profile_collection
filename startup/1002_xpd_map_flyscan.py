@@ -104,7 +104,7 @@ def xrd_map(
     req_dwell_time = dwell_time
     del dwell_time
     acq_time = glbl['frame_acq_time']
-    
+
 
     plan_args_cache = {
         k: v
@@ -119,7 +119,7 @@ def xrd_map(
     #(num_frame, acq_time, computed_dwell_time) = yield from _configure_area_det(
     #    req_dwell_time)
     # set up metadata
-    
+
     sp = {
         "time_per_frame": acq_time,
         "num_frames": num_frame,
@@ -203,7 +203,7 @@ def xrd_map(
                 start_pos = yield from _extarct_motor_pos(fly_motor)
                 yield from bps.mv(px_start, start_pos)
                 # wait for frame to finish
-                yield from bps.wait(group=fly_pixel_group)  
+                yield from bps.wait(group=fly_pixel_group)
 
                 # grab the motor position
                 stop_pos = yield from _extarct_motor_pos(fly_motor)
@@ -251,3 +251,128 @@ def dark_plan(detector, shell, *, stream_name="dark"):
     # Restage.
     yield from bps.unstage(detector)
     yield from bps.stage(detector)
+
+
+import itertools
+from collections import deque
+from pathlib import Path
+from event_model import compose_resource
+
+
+class XPDFlyer:
+    def __init__(self, det, motor, motor_start, motor_stop, name="XPDFlyer", **kwargs):
+        self.name = name
+
+        self.det = det
+        self.motor = motor
+        self.motor_start = motor_start
+        self.motor_stop = motor_stop
+
+        # Objects needed for the bluesky documents generation:
+        self._asset_docs_cache = None
+        self._resource_document = None
+        self._datum_factory = None
+
+    def kickoff(self):
+        self._asset_docs_cache = deque()
+        self._counter = itertools.count()
+
+        # Get information from detector:
+        self.det.stage()
+
+        # We need the following information as in the document stream produced by bp.count([det]):
+
+        # ('resource',
+        # {'spec': 'AD_TIFF',
+        # 'root': '/nsls2/data/xpd-new/legacy/raw',
+        # 'resource_path': 'pe1_data/2023/06/20',
+        # 'resource_kwargs': {
+        #   'template': '%s%s_%6.6d.tiff',
+        #   'filename': '69e4ea31-849c-49cd-836e',
+        #   'frame_per_point': 1},
+        # 'path_semantics': 'posix',
+        # 'uid': '63c5d72f-c393-47a8-a028-ff89ed3e5ccb',
+        # 'run_start': 'a6ecf54d-ab06-4ed3-bf07-68a03d194380'})
+        #
+        # ('datum',
+        # {'datum_id': '63c5d72f-c393-47a8-a028-ff89ed3e5ccb/0',
+        # 'datum_kwargs': {'point_number': 0},
+        # 'resource': '63c5d72f-c393-47a8-a028-ff89ed3e5ccb'})
+
+        # For Resource doc:
+        self._filestore_spec = self.det.tiff.filestore_spec  # string
+
+        self._root_dir = str(self.det.tiff.reg_root)  # pathlib.Path object
+        self._resource_path = str(Path(self.det.tiff.read_path_template).relative_to(self._root_dir))
+
+        ## For resource_kwargs:
+        self._file_template = self.det.tiff.file_template.get()
+        self._file_name = self.det.tiff.file_name.get()
+        self._frame_per_point = self.det.cam.num_exposures.get()
+
+        # For Datum doc:
+        self._file_number = self.det.tiff.file_number.get()
+
+        # Optional parameters:
+        self._file_write_status = self.det.tiff.write_file.get(as_string=True)  # e.g., 'Done'
+
+        # Prepare 'resource' factory.
+        self._resource_document, self._datum_factory, _ = compose_resource(
+            start={"uid": "needed for compose_resource() but will be discarded"},
+            spec=self._filestore_spec,
+            root=self._root_dir,
+            resource_path=self._resource_path,
+            resource_kwargs=dict(
+                template=self._file_template,
+                filename=self._file_name,
+                frame_per_point=self._frame_per_point,
+            ),
+        )
+        # now discard the start uid, a real one will be added later
+        self._resource_document.pop("run_start")
+        self._asset_docs_cache.append(("resource", self._resource_document))
+
+        # Move the motor to the start position in a blocking fashion.
+        # Then, start moving the motor to the stop position and subscribe the watch function.
+        st = self.motor.move(self.motor_start)
+        # Example of 'st':
+        #   MoveStatus(done=True, pos=sample_x, elapsed=9.3, success=True, settle_time=0.0)
+
+        self.motor_status = self.motor.set(self.motor_stop)
+
+        return st  # it should have the 'done' status already
+
+    def _watch(self, *args, **kwargs):
+        print(args)
+        print(kwargs)
+        self.det.trigger()
+
+        datum_document = self._datum_factory(datum_kwargs={"point_number": next(self._counter)})
+        self._asset_docs_cache.append(("datum", datum_document))
+
+    def complete(self):
+
+        self.motor_status.watch(self._watch)
+
+        return self.motor_status
+
+    def collect(self):
+
+        self._resource_document = None
+        self._datum_factory = None
+
+        # yield {"data": data, ...}
+        yield {}
+
+    def describe_collect(self):
+        # TODO: implement
+        ...
+
+    # def collect_asset_docs(self):
+    #     items = list(self._asset_docs_cache)
+    #     self._asset_docs_cache.clear()
+    #     for item in items:
+    #         yield item
+
+
+
