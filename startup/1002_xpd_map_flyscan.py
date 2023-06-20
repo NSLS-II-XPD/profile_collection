@@ -117,9 +117,9 @@ def xrd_map(
         ad, req_dwell_time,acq_time
     )
     #(num_frame, acq_time, computed_dwell_time) = yield from _configure_area_det(
-    #    req_dwell_time
-    #)
+    #    req_dwell_time)
     # set up metadata
+    
     sp = {
         "time_per_frame": acq_time,
         "num_frames": num_frame,
