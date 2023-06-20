@@ -61,6 +61,9 @@ xrun.md['beamline_config'] = beamline_config
 # insert header to db, either simulated or real
 xrun.subscribe(db.insert, 'all')
 
+# We need to repeat it here for `xrun` as RE is not used here...
+nslsii.configure_kafka_publisher(xrun, "xpd")
+
 # robot command
 xrun.register_command('load_sample', _load_sample)
 xrun.register_command('unload_sample', _unload_sample)
