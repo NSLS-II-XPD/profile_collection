@@ -134,10 +134,13 @@ def take_dark(cam, light_field, dark_field_name):
 class XPDFileStoreTIFFSquashing(FileStoreTIFFSquashing):
     def describe(self):
         description = super().describe()
-        shape = list(description[f"{self.parent.name}_image"]["shape"])
+        key = f"{self.parent.name}_image"
+        if not description:
+            description[key] = self.parent.make_data_key()
+        shape = list(description[key]["shape"])
         shape[0] = self.get_frames_per_point()
         shape = tuple(shape)
-        description[f"{self.parent.name}_image"]["shape"] = shape
+        description[key]["shape"] = shape
         return description
 
 
