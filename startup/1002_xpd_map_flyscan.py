@@ -1,4 +1,6 @@
 """Plan to run a XRD map "fly-scan" over a large sample."""
+import datetime
+import pprint
 import uuid
 
 import numpy as np
@@ -9,6 +11,7 @@ from bluesky.utils import short_uid
 
 import bluesky_darkframes
 from ophyd import Signal
+from ophyd.status import Status
 
 
 # vendored, simplified, and made public from bluesky_darkframes
@@ -273,9 +276,17 @@ class XPDFlyer:
         self._resource_document = None
         self._datum_factory = None
 
+    def get_images_counter(self):
+        return self.det.cam.num_images_counter.get()
+
     def kickoff(self):
+        print("Kickoff method")
         self._asset_docs_cache = deque()
         self._counter = itertools.count()
+
+        # Used for events generation:
+        self._datum_docs = deque()
+        self._motor_positions = deque()
 
         # Get information from detector:
         self.det.stage()
@@ -299,6 +310,10 @@ class XPDFlyer:
         # 'datum_kwargs': {'point_number': 0},
         # 'resource': '63c5d72f-c393-47a8-a028-ff89ed3e5ccb'})
 
+        # Initial "done" status for the detector:
+        self._trigger_status = Status()
+        self._trigger_status.set_finished()
+
         # For Resource doc:
         self._filestore_spec = self.det.tiff.filestore_spec  # string
 
@@ -317,11 +332,14 @@ class XPDFlyer:
         self._file_write_status = self.det.tiff.write_file.get(as_string=True)  # e.g., 'Done'
 
         # Prepare 'resource' factory.
+
+        date = datetime.datetime.now()
+        resource_path = date.strftime(self._resource_path)
         self._resource_document, self._datum_factory, _ = compose_resource(
             start={"uid": "needed for compose_resource() but will be discarded"},
             spec=self._filestore_spec,
             root=self._root_dir,
-            resource_path=self._resource_path,
+            resource_path=resource_path,
             resource_kwargs=dict(
                 template=self._file_template,
                 filename=self._file_name,
@@ -345,34 +363,63 @@ class XPDFlyer:
     def _watch(self, *args, **kwargs):
         print(args)
         print(kwargs)
-        self.det.trigger()
+        if self._trigger_status.done:
+            self._trigger_status = self.det.trigger()
+            datum_document = self._datum_factory(datum_kwargs={"point_number": next(self._counter)})
+            self._asset_docs_cache.append(("datum", datum_document))
+            self._datum_docs.append(datum_document)
 
-        datum_document = self._datum_factory(datum_kwargs={"point_number": next(self._counter)})
-        self._asset_docs_cache.append(("datum", datum_document))
+            # if "current" in kwargs:
+            motor_pos = kwargs["current"]
+            # else:
+                # Final callback does not have the 'current' field, using the motor_stop value:
+            #    motor_pos = self.motor_stop
+
+            self._motor_positions.append(motor_pos)
 
     def complete(self):
+        print("Complete method")
 
         self.motor_status.watch(self._watch)
 
         return self.motor_status
 
     def collect(self):
+        print("Collect method")
+
+        def now():
+            return ttime.time()
 
         self._resource_document = None
         self._datum_factory = None
 
-        # yield {"data": data, ...}
-        yield {}
+        for motor_pos, datum_doc in zip(self._motor_positions, self._datum_docs):
+            data_dict = {
+                f"{self.det.name}_image": datum_doc["datum_id"],
+                f"{self.motor.name}": motor_pos,
+            }
+
+            # TODO: fix timestamps based on the readings in the '_watch()' method.
+            yield {
+                "data": data_dict,
+                "timestamps": {key: now() for key in data_dict},
+                "time": now(),
+                "filled": {key: False for key in data_dict},
+            }
 
     def describe_collect(self):
+        print("Descrbe_collect method")
         # TODO: implement
-        ...
+        return_dict = {"primary": {k: v for k, v in pe2c.describe().items() if k == f"{self.det.name}_image"}}
+        return_dict["primary"].update({k: v for k, v in self.motor.describe().items() if k == f"{self.motor.name}"})
 
-    # def collect_asset_docs(self):
-    #     items = list(self._asset_docs_cache)
-    #     self._asset_docs_cache.clear()
-    #     for item in items:
-    #         yield item
+        return return_dict
+
+    def collect_asset_docs(self):
+        items = list(self._asset_docs_cache)
+        self._asset_docs_cache.clear()
+        for item in items:
+            yield item
 
 
-
+xpd_flyer = XPDFlyer(pe2c, sample_x, 8, 20)
