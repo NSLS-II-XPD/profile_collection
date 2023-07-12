@@ -1,12 +1,14 @@
 """Plan to run a XRD map "fly-scan" over a large sample."""
 import datetime
 import pprint
+import time as ttime
 import uuid
 
 import numpy as np
 import itertools
 import bluesky.preprocessors as bpp
 import bluesky.plan_stubs as bps
+import bluesky.plans as bp
 from bluesky.utils import short_uid
 
 import bluesky_darkframes
@@ -263,13 +265,14 @@ from event_model import compose_resource
 
 
 class XPDFlyer:
-    def __init__(self, det, motor, motor_start, motor_stop, name="XPDFlyer", **kwargs):
+    def __init__(self, det, motor, motor_start, motor_stop, name="XPDFlyer", stats_key="stats1", **kwargs):
         self.name = name
 
         self.det = det
         self.motor = motor
         self.motor_start = motor_start
         self.motor_stop = motor_stop
+        self.stats_key = stats_key
 
         # Objects needed for the bluesky documents generation:
         self._asset_docs_cache = None
@@ -286,9 +289,12 @@ class XPDFlyer:
 
         # Used for events generation:
         self._datum_docs = deque()
+        self._det_stats = deque()
         self._motor_positions = deque()
+        self._timestamps = deque()
 
-        # Get information from detector:
+        # Unstage the detector first from previous potential failure, then stage the detector:
+        self.det.unstage()
         self.det.stage()
 
         # We need the following information as in the document stream produced by bp.count([det]):
@@ -364,17 +370,20 @@ class XPDFlyer:
         print(args)
         print(kwargs)
         if self._trigger_status.done:
+            self._timestamps.append(self._now())
+
             self._trigger_status = self.det.trigger()
+            self._det_stats.append(getattr(self.det, self.stats_key).total.get())
+
             datum_document = self._datum_factory(datum_kwargs={"point_number": next(self._counter)})
             self._asset_docs_cache.append(("datum", datum_document))
             self._datum_docs.append(datum_document)
 
-            # if "current" in kwargs:
-            motor_pos = kwargs["current"]
-            # else:
-                # Final callback does not have the 'current' field, using the motor_stop value:
-            #    motor_pos = self.motor_stop
-
+            if "current" in kwargs:
+                motor_pos = kwargs["current"]
+            else:
+               # Final callback does not have the 'current' field, using the motor_stop value:
+               motor_pos = self.motor_stop
             self._motor_positions.append(motor_pos)
 
     def complete(self):
@@ -384,34 +393,40 @@ class XPDFlyer:
 
         return self.motor_status
 
+    def _now(self):
+        return ttime.time()
+
     def collect(self):
         print("Collect method")
 
-        def now():
-            return ttime.time()
+        self.det.unstage()
 
         self._resource_document = None
         self._datum_factory = None
 
-        for motor_pos, datum_doc in zip(self._motor_positions, self._datum_docs):
+        for motor_pos, datum_doc, det_stat, timestamp in zip(self._motor_positions, self._datum_docs, self._det_stats, self._timestamps):
             data_dict = {
                 f"{self.det.name}_image": datum_doc["datum_id"],
+                f"{getattr(self.det, self.stats_key).total.name}": det_stat,
                 f"{self.motor.name}": motor_pos,
             }
 
             # TODO: fix timestamps based on the readings in the '_watch()' method.
             yield {
                 "data": data_dict,
-                "timestamps": {key: now() for key in data_dict},
-                "time": now(),
+                "timestamps": {key: timestamp for key in data_dict},
+                "time": timestamp,
                 "filled": {key: False for key in data_dict},
             }
 
     def describe_collect(self):
         print("Descrbe_collect method")
         # TODO: implement
-        return_dict = {"primary": {k: v for k, v in pe2c.describe().items() if k == f"{self.det.name}_image"}}
-        return_dict["primary"].update({k: v for k, v in self.motor.describe().items() if k == f"{self.motor.name}"})
+        return_dict = {"primary": {k: v for k, v in self.det.describe().items()
+                                   if k in [f"{self.det.name}_image",
+                                            f"{getattr(self.det, self.stats_key).total.name}"]}}
+        return_dict["primary"].update({k: v for k, v in self.motor.describe().items()
+                                       if k == f"{self.motor.name}"})
 
         return return_dict
 
@@ -422,4 +437,36 @@ class XPDFlyer:
             yield item
 
 
-xpd_flyer = XPDFlyer(pe2c, sample_x, 8, 20)
+# Example of a flyer object:
+#   xpd_flyer = XPDFlyer(pe2c, sample_x, 8, 80)
+
+def step_and_fly(step_motor, step_start, step_stop, step_num_steps, det, fly_motor, fly_start, fly_stop):
+    """Perform 2-D scan with a step scan in one dimension and fly scan in another one.
+    
+    Example of execution:
+      
+        RE(step_and_fly(sample_y, 17, 20, 3, pe2c, sample_x, 8, 80))
+
+    Args:
+        step_motor (_type_): _description_
+        step_start (_type_): _description_
+        step_stop (_type_): _description_
+        step_num_steps (_type_): _description_
+        det (_type_): _description_
+        fly_motor (_type_): _description_
+        fly_start (_type_): _description_
+        fly_stop (_type_): _description_
+
+    Yields:
+        _type_: _description_
+    """
+    for i, step_pos in enumerate(np.linspace(step_start, step_stop, step_num_steps)):
+        yield from bps.mv(step_motor, step_pos)
+        if i % 2 == 0:
+            start = fly_start
+            stop = fly_stop
+        else:
+            start = fly_stop
+            stop = fly_start
+        xpd_flyer = XPDFlyer(det, fly_motor, start, stop)
+        yield from bp.fly([xpd_flyer])
