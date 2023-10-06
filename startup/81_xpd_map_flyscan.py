@@ -379,6 +379,8 @@ class XPDFlyer:
             self._asset_docs_cache.append(("datum", datum_document))
             self._datum_docs.append(datum_document)
 
+            print(f"\ndatum_document:\n{datum_document}")
+
             if "current" in kwargs:
                 motor_pos = kwargs["current"]
             else:
@@ -404,7 +406,8 @@ class XPDFlyer:
         self._resource_document = None
         self._datum_factory = None
 
-        for motor_pos, datum_doc, det_stat, timestamp in zip(self._motor_positions, self._datum_docs, self._det_stats, self._timestamps):
+        for i, (motor_pos, datum_doc, det_stat, timestamp) in enumerate(zip(self._motor_positions, self._datum_docs, self._det_stats, self._timestamps)):
+            print(f"{i:02d}  motor_pos={motor_pos}  datum_doc={datum_doc}  det_stat={det_stat}  timestamp={timestamp}")
             data_dict = {
                 f"{self.det.name}_image": datum_doc["datum_id"],
                 f"{getattr(self.det, self.stats_key).total.name}": det_stat,
@@ -424,7 +427,8 @@ class XPDFlyer:
         # TODO: implement
         return_dict = {"primary": {k: v for k, v in self.det.describe().items()
                                    if k in [f"{self.det.name}_image",
-                                            f"{getattr(self.det, self.stats_key).total.name}"]}}
+                                            f"{getattr(self.det, self.stats_key).total.name}",
+                                            ]}}
         return_dict["primary"].update({k: v for k, v in self.motor.describe().items()
                                        if k == f"{self.motor.name}"})
 
@@ -442,9 +446,9 @@ class XPDFlyer:
 
 def step_and_fly(step_motor, step_start, step_stop, step_num_steps, det, fly_motor, fly_start, fly_stop):
     """Perform 2-D scan with a step scan in one dimension and fly scan in another one.
-    
+
     Example of execution:
-      
+
         RE(step_and_fly(sample_y, 17, 20, 3, pe2c, sample_x, 8, 80))
 
     Args:
@@ -460,6 +464,9 @@ def step_and_fly(step_motor, step_start, step_stop, step_num_steps, det, fly_mot
     Yields:
         _type_: _description_
     """
+
+    # TODO: add dark frame collection here - will result in a separate run/uid.
+
     for i, step_pos in enumerate(np.linspace(step_start, step_stop, step_num_steps)):
         yield from bps.mv(step_motor, step_pos)
         if i % 2 == 0:
@@ -470,3 +477,69 @@ def step_and_fly(step_motor, step_start, step_stop, step_num_steps, det, fly_mot
             stop = fly_start
         xpd_flyer = XPDFlyer(det, fly_motor, start, stop)
         yield from bp.fly([xpd_flyer])
+
+
+# from pdfstream.callbacks.analysis import AnalysisConfig, AnalysisStream
+# ac = AnalysisConfig()
+# ac.read(os.path.expanduser("~/.pdfstream/xpd_server_xpd_beamline.ini"))
+# anstr = AnalysisStream(config=ac)
+
+
+# In [6]: hdr = db["1851deea-56dc-4678-8ddd-22ff3b3d7548"]
+
+# In [7]: hdr = db[-1]
+
+# In [8]: for name, doc in hdr.documents(fill=True):
+#    ...:     print(name)
+#    ...:     anstr(name, doc)
+#    ...:
+# start
+# [10/06/2023 05:23:16 PM] Receive the start of '20b45453-a4ba-48a8-a39e-4862cae02c70'.
+# [10/06/2023 05:23:17 PM] Read the calibration data in the start.
+# descriptor
+# [10/06/2023 05:23:17 PM] Find the data key 'pe2_image' in the stream 'primary'.
+# resource
+# datum
+# datum
+# datum
+# datum
+# datum
+# datum
+# event
+# [10/06/2023 05:23:17 PM] Start processing the event 1.
+# [10/06/2023 05:23:20 PM] Save the PDF data in '/nsls2/data/xpd-new/legacy/processed/xpdUser/tiff_base/Setup' using file name 'Setup_20231006-172247_20b454_0001'.
+# [10/06/2023 05:23:20 PM] Finish processing the event 1.
+# event
+# [10/06/2023 05:23:20 PM] Start processing the event 2.
+# [10/06/2023 05:23:21 PM] Save the PDF data in '/nsls2/data/xpd-new/legacy/processed/xpdUser/tiff_base/Setup' using file name 'Setup_20231006-172247_20b454_0002'.
+# [10/06/2023 05:23:21 PM] Finish processing the event 2.
+# event
+# [10/06/2023 05:23:21 PM] Start processing the event 3.
+# [10/06/2023 05:23:23 PM] Save the PDF data in '/nsls2/data/xpd-new/legacy/processed/xpdUser/tiff_base/Setup' using file name 'Setup_20231006-172247_20b454_0003'.
+# [10/06/2023 05:23:23 PM] Finish processing the event 3.
+# event
+# [10/06/2023 05:23:23 PM] Start processing the event 4.
+# [10/06/2023 05:23:24 PM] Save the PDF data in '/nsls2/data/xpd-new/legacy/processed/xpdUser/tiff_base/Setup' using file name 'Setup_20231006-172247_20b454_0004'.
+# [10/06/2023 05:23:24 PM] Finish processing the event 4.
+# event
+# [10/06/2023 05:23:24 PM] Start processing the event 5.
+# [10/06/2023 05:23:25 PM] Save the PDF data in '/nsls2/data/xpd-new/legacy/processed/xpdUser/tiff_base/Setup' using file name 'Setup_20231006-172247_20b454_0005'.
+# [10/06/2023 05:23:25 PM] Finish processing the event 5.
+# event
+# [10/06/2023 05:23:25 PM] Start processing the event 6.
+# [10/06/2023 05:23:27 PM] Save the PDF data in '/nsls2/data/xpd-new/legacy/processed/xpdUser/tiff_base/Setup' using file name 'Setup_20231006-172247_20b454_0006'.
+# [10/06/2023 05:23:27 PM] Finish processing the event 6.
+# stop
+# [10/06/2023 05:23:27 PM] Receive the stop of '20b45453-a4ba-48a8-a39e-4862cae02c70'.
+
+# In [9]: hdr.table()
+# Out[9]:
+#                                  time                               pe2_image  pe2_stats1_total    sample_x
+# seq_num
+# 1       2023-10-06 21:22:49.411360025  c0be55e2-8b2e-4cd1-b12f-94e99019fb3c/0      6.432940e+09  104.014375
+# 2       2023-10-06 21:22:49.639249563  c0be55e2-8b2e-4cd1-b12f-94e99019fb3c/1      6.430192e+09  105.136875
+# 3       2023-10-06 21:22:49.883318186  c0be55e2-8b2e-4cd1-b12f-94e99019fb3c/2      6.428717e+09  107.088750
+# 4       2023-10-06 21:22:50.205786467  c0be55e2-8b2e-4cd1-b12f-94e99019fb3c/3      6.430590e+09  109.677188
+# 5       2023-10-06 21:22:50.420942545  c0be55e2-8b2e-4cd1-b12f-94e99019fb3c/4      6.429063e+09  111.392500
+# 6       2023-10-06 21:22:50.684250593  c0be55e2-8b2e-4cd1-b12f-94e99019fb3c/5      6.432263e+09  113.457500
+
