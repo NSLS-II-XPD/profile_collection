@@ -414,7 +414,6 @@ class XPDFlyer:
                 f"{self.motor.name}": motor_pos,
             }
 
-            # TODO: fix timestamps based on the readings in the '_watch()' method.
             yield {
                 "data": data_dict,
                 "timestamps": {key: timestamp for key in data_dict},
@@ -443,6 +442,38 @@ class XPDFlyer:
 
 # Example of a flyer object:
 #   xpd_flyer = XPDFlyer(pe2c, sample_x, 8, 80)
+
+def fly_stream(flyers, *, md=None, stream=False, return_payload=True):
+    """
+    Perform a fly scan with one or more 'flyers'.
+
+    Parameters
+    ----------
+    flyers : collection
+        objects that support the flyer interface
+    md : dict, optional
+        metadata
+
+    Yields
+    ------
+    msg : Msg
+        'kickoff', 'wait', 'complete, 'wait', 'collect' messages
+
+    See Also
+    --------
+    :func:`bluesky.preprocessors.fly_during_wrapper`
+    :func:`bluesky.preprocessors.fly_during_decorator`
+    """
+    uid = yield from bps.open_run(md)
+    for flyer in flyers:
+        yield from bps.kickoff(flyer, wait=True)
+    for flyer in flyers:
+        yield from bps.complete(flyer, wait=True)
+    for flyer in flyers:
+        yield from bps.collect(flyer, stream=stream, return_payload=return_payload)
+    yield from bps.close_run()
+    return uid
+
 
 def step_and_fly(step_motor, step_start, step_stop, step_num_steps, det, fly_motor, fly_start, fly_stop):
     """Perform 2-D scan with a step scan in one dimension and fly scan in another one.
@@ -476,7 +507,7 @@ def step_and_fly(step_motor, step_start, step_stop, step_num_steps, det, fly_mot
             start = fly_stop
             stop = fly_start
         xpd_flyer = XPDFlyer(det, fly_motor, start, stop)
-        yield from bp.fly([xpd_flyer])
+        yield from fly_stream([xpd_flyer], stream=True, return_payload=True)
 
 
 # from pdfstream.callbacks.analysis import AnalysisConfig, AnalysisStream
