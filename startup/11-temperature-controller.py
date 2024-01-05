@@ -56,13 +56,13 @@ class CS800TemperatureController(PVPositioner):
         #status = DeviceStatus(self)
         #status._finished()
         return DeviceStatus(self, done = True, success=True)
-    
+
     def moveto(self, position, timeout=None, move_cb=None, **kwargs):
         if self.runmode.get()!='Shutdown OK':
             self.setpoint.set(position, timeout=timeout, **kwargs)
             self.trig.put(1, wait=True)
             #wait 5 second to allow phaseID update after trigger
-            time.sleep(5)
+            time.sleep(10)
             while self.done.value != 'Hold':
                 time.sleep(0.1)
             return DeviceStatus(self,done = True, success=True)
@@ -74,7 +74,7 @@ class CS800TemperatureController(PVPositioner):
             self.coolsetpoint.set(position, timeout=timeout, **kwargs)
             self.cooltrig.put(1, wait=True)
             #wait 5 second to allow phaseID update after trigger
-            time.sleep(5)
+            time.sleep(10)
             while self.done.value != 'Hold':
                 time.sleep(0.1)
             return DeviceStatus(self,done = True, success=True)
@@ -102,11 +102,11 @@ class Eurotherm(EpicsSignalPositioner):
 eurotherm = Eurotherm('XF:28IDC-ES:1{Env:04}T-I',
                                  write_pv='XF:28IDC-ES:1{Env:04}T-SP',
                                  tolerance= 1, name='eurotherm')
-                                 
+
 eurotherm_power = Eurotherm('XF:28IDC-ES:1{Env:04}Out-I',
                                  write_pv='XF:28IDC-ES:1{Env:04}Out-SP',
                                  tolerance= 1, name='eurotherm_power')
-                                 
+
 eurotherm_mode = Eurotherm('XF:28IDC-ES:1{Env:04}Mode:Man-Sts',
                                  write_pv='XF:28IDC-ES:1{Env:04}Mode:Man-Cmd',
                                  tolerance= 1, name='eurotherm_mode')

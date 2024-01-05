@@ -180,7 +180,7 @@ class XPDPerkinElmer(PerkinElmerDetector):
     number_of_sets = C(Signal, value=1, add_prefix=())
 
     pixel_size = C(Signal, value=.0002, kind='config')
-    #testing DO 
+    #testing DO
     detector_type = C(Signal, value='Perkin', kind='config')
     stats1 = C(StatsPluginV33, 'Stats1:')
     stats2 = C(StatsPluginV33, 'Stats2:')
@@ -286,7 +286,7 @@ class PerkinElmerContinuousStage(PerkinElmerContinuous):
                 super().stage()
             except TimeoutError as e:
                 if i == self.stage_tries-1:
-                    raise 
+                    raise
                 print(e)
 
     def unstage(self):
@@ -298,7 +298,7 @@ class PerkinElmerContinuousStage(PerkinElmerContinuous):
                     raise
                 print(e)
 
-            
+
 
 
 # PE1/2/3 PV prefixes in one place:
@@ -337,18 +337,81 @@ pe2c = PerkinElmerContinuous(pe2_pv_prefix, name='pe2',
 # pe3c = PerkinElmerContinuous(pe3_pv_prefix, name='pe3',
 #                             read_attrs=['tiff', 'stats1.total'],
 #                              plugin_name='tiff')
+# for Dexela detector, added by Hui
+class XPDPerkinElmerDEX(PerkinElmerDetector):
+    image = C(ImagePlugin, 'image1:')
+    _default_configuration_attrs = (
+        PerkinElmerDetector._default_configuration_attrs +
+        ('images_per_set', 'number_of_sets', 'pixel_size'))
+    tiff = C(XPDTIFFPlugin, 'TIFF1:',
+             write_path_template='/a/b/c/',
+             read_path_template='/a/b/c',
+             cam_name='cam',  # used to configure "tiff squashing"
+             proc_name='proc',  # ditto
+             read_attrs=[],
+             root='/nsls2/data/xpd-new/legacy/raw/')
+
+    # hdf5 = C(XPDHDF5Plugin, 'HDF1:',
+    #          write_path_template='G:/pe1_data/%Y/%m/%d/',
+    #          read_path_template='/direct/XF28ID2/pe1_data/%Y/%m/%d/',
+    #          root='/direct/XF28ID2/')
+
+    proc = C(ProcessPlugin, 'Proc1:')
+
+    # These attributes together replace `num_images`. They control
+    # summing images before they are stored by the detector (a.k.a. "tiff
+    # squashing").
+    images_per_set = C(Signal, value=1, add_prefix=())
+    number_of_sets = C(Signal, value=1, add_prefix=())
+
+    pixel_size = C(Signal, value=.0002, kind='config')
+    #testing DO
+    detector_type = C(Signal, value='Perkin', kind='config')
+    stats1 = C(StatsPluginV33, 'Stats1:')
+    stats2 = C(StatsPluginV33, 'Stats2:')
+    stats3 = C(StatsPluginV33, 'Stats3:')
+    stats4 = C(StatsPluginV33, 'Stats4:')
+    stats5 = C(StatsPluginV33, 'Stats5:', kind = 'hinted')
+    #stats5.total.kind = 'hinted'
+
+    roi1 = C(ROIPlugin, 'ROI1:')
+    roi2 = C(ROIPlugin, 'ROI2:')
+    roi3 = C(ROIPlugin, 'ROI3:')
+    roi4 = C(ROIPlugin, 'ROI4:')
+
+    # dark_image = C(SavedImageSignal, None)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.stage_sigs.update([(self.cam.trigger_mode, 'Int. Free Run')])
+
+class DEX_PerkinElmerContinuous(ContinuousAcquisitionTrigger, XPDPerkinElmerDEX):
+    pass
+
+
+#dexela1_pv_prefix = 'XF:28IDC-ES:1{Det:DEX}'
+# Dexela detector configurations:
+
+#dexela1 = PerkinElmerStandardV33(dexela1_pv_prefix, name='dexela1', read_attrs=['tiff'])
+#dexela1m = PerkinElmerMulti(dexela1_pv_prefix, name='dexela1', read_attrs=['tiff'],
+#                        trigger_cycle=[[('image', {shctl1: 1}),
+#                                        ('dark_image', {shctl1: 0})]])
+#dexela1c = DEX_PerkinElmerContinuous(dexela1_pv_prefix, name='dexela1',
+#                             read_attrs=['tiff', 'stats1.total'],
+#                             plugin_name='tiff')
 
 
 # Update read/write paths for all the detectors in once:
 for det in [
             pe1, pe1m, pe1c,
-            pe2, pe2m, pe2c
+            #pe2, pe2m, pe2c,
+            #dexela1c
             ]:
     det.tiff.read_path_template = f'/nsls2/data/xpd-new/legacy/raw/{det.name}_data/%Y/%m/%d/'
     det.tiff.write_path_template = f'J:\\%Y\\%m\\%d\\'
     det.cam.bin_x.kind = 'config'
     det.cam.bin_y.kind = 'config'
     det.detector_type.kind = 'config'
-    
+
 # some defaults, as an example of how to use this
 # pe1.configure(dict(images_per_set=6, number_of_sets=10))
