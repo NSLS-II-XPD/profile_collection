@@ -414,11 +414,21 @@ class XPDFlyer:
                 f"{self.motor.name}": motor_pos,
             }
 
+            filled_dict = {}
+            for key in data_dict:
+                if key == f"{self.det.name}_image":
+                    # We need to fill the detector image data via RunRouter:
+                    filled = False
+                else:
+                    # We do not need to fill the other readings (i.e., motor positions, etc.):
+                    filled = True
+                filled_dict[key] = filled
+
             yield {
                 "data": data_dict,
                 "timestamps": {key: timestamp for key in data_dict},
                 "time": timestamp,
-                "filled": {key: False for key in data_dict},
+                "filled": filled_dict,
             }
 
     def describe_collect(self):
