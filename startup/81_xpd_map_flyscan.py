@@ -35,7 +35,7 @@ class SnapshotShell:
         return getattr(self.__snapshot, key)
 
 
-def _extarct_motor_pos(mtr):
+def _extract_motor_pos(mtr):
     ret = yield from bps.read(mtr)
     if ret is None:
         return None
@@ -205,13 +205,13 @@ def xrd_map(
                     yield from bps.trigger(d, group=fly_pixel_group)
 
                 # grab motor position right after we trigger
-                start_pos = yield from _extarct_motor_pos(fly_motor)
+                start_pos = yield from _extract_motor_pos(fly_motor)
                 yield from bps.mv(px_start, start_pos)
                 # wait for frame to finish
                 yield from bps.wait(group=fly_pixel_group)
 
                 # grab the motor position
-                stop_pos = yield from _extarct_motor_pos(fly_motor)
+                stop_pos = yield from _extract_motor_pos(fly_motor)
                 yield from bps.mv(px_stop, stop_pos)
                 # generate the event
                 yield from bps.create("primary")
