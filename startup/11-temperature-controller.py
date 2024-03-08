@@ -81,6 +81,14 @@ class CS800TemperatureController(PVPositioner):
         else:
             raise ValueError('cs800 is shutdown mode, please restart it')
 
+    def setcoolto(self, position, timeout=None, move_cb=None, **kwargs):
+        if self.runmode.get()!='Shutdown OK':
+            self.coolsetpoint.set(position, timeout=timeout, **kwargs)
+            self.cooltrig.put(1, wait=True)
+            
+            return DeviceStatus(self,done = True, success=True)
+        else:
+            raise ValueError('cs800 is shutdown mode, please restart it')
 
 # To allow for sample temperature equilibration time, increase
 # the `settle_time` parameter (units: seconds).

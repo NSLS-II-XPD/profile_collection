@@ -322,11 +322,11 @@ pe1c = PerkinElmerContinuous(pe1_pv_prefix, name='pe1',
 # PE2 detector configurations:
 pe2 = PerkinElmerStandardV33(pe2_pv_prefix, name='pe2', read_attrs=['tiff'])
 pe2m = PerkinElmerMulti(pe2_pv_prefix, name='pe2', read_attrs=['tiff'],
-                        trigger_cycle=[[('image', {shctl1: 1}),
-                                        ('dark_image', {shctl1: 0})]])
+                         trigger_cycle=[[('image', {shctl1: 1}),
+                                         ('dark_image', {shctl1: 0})]])
 pe2c = PerkinElmerContinuous(pe2_pv_prefix, name='pe2',
-                             read_attrs=['tiff', 'stats1.total'],
-                             plugin_name='tiff')
+                              read_attrs=['tiff', 'stats1.total'],
+                              plugin_name='tiff')
 
 
 # PE2 detector configurations:
@@ -388,23 +388,23 @@ class XPDPerkinElmerDEX(PerkinElmerDetector):
 class DEX_PerkinElmerContinuous(ContinuousAcquisitionTrigger, XPDPerkinElmerDEX):
     pass
 
-
-#dexela1_pv_prefix = 'XF:28IDC-ES:1{Det:DEX}'
+''' 
+dexela1_pv_prefix = 'XF:28IDC-ES:1{Det:DEX}'
 # Dexela detector configurations:
 
-#dexela1 = PerkinElmerStandardV33(dexela1_pv_prefix, name='dexela1', read_attrs=['tiff'])
-#dexela1m = PerkinElmerMulti(dexela1_pv_prefix, name='dexela1', read_attrs=['tiff'],
-#                        trigger_cycle=[[('image', {shctl1: 1}),
-#                                        ('dark_image', {shctl1: 0})]])
-#dexela1c = DEX_PerkinElmerContinuous(dexela1_pv_prefix, name='dexela1',
-#                             read_attrs=['tiff', 'stats1.total'],
-#                             plugin_name='tiff')
-
+dexela1 = PerkinElmerStandardV33(dexela1_pv_prefix, name='dexela1', read_attrs=['tiff'])
+dexela1m = PerkinElmerMulti(dexela1_pv_prefix, name='dexela1', read_attrs=['tiff'],
+                        trigger_cycle=[[('image', {shctl1: 1}),
+                                        ('dark_image', {shctl1: 0})]])
+dexela1c = DEX_PerkinElmerContinuous(dexela1_pv_prefix, name='dexela1',
+                             read_attrs=['tiff', 'stats1.total'],
+                             plugin_name='tiff')
+'''
 
 # Update read/write paths for all the detectors in once:
 for det in [
             pe1, pe1m, pe1c,
-            #pe2, pe2m, pe2c,
+            pe2, pe2m, pe2c,
             #dexela1c
             ]:
     det.tiff.read_path_template = f'/nsls2/data/xpd-new/legacy/raw/{det.name}_data/%Y/%m/%d/'
