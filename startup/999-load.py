@@ -55,7 +55,11 @@ xrun = CustomizedRunEngine(None)
 xrun.md['beamline_id'] = glbl['beamline_id']
 xrun.md['group'] = glbl['group']
 xrun.md['facility'] = glbl['facility']
+
+# TODO: fix for queueserver - need to exclude interaction:
+# /opt/bluesky/queueserver/queueserver-config.yml - check for existence of this file and load silently...
 beamline_config = _load_beamline_config(glbl['blconfig_path'])
+
 xrun.md['beamline_config'] = beamline_config
 
 # insert header to db, either simulated or real
