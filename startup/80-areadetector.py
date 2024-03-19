@@ -140,7 +140,10 @@ class XPDFileStoreTIFFSquashing(FileStoreTIFFSquashing):
         shape = list(description[key]["shape"])
         shape[0] = self.get_frames_per_point()
         shape = tuple(shape)
-        description[key]["shape"] = shape
+        description[key].update({
+            "shape": shape,
+            "dtype_str": "<u2",
+        })
         return description
 
 
