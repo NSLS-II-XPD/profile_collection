@@ -270,7 +270,7 @@ def take_a_uvvis_csv_q(sample_type='test', plot=False, csv_path=None, data_agent
             yield from bps.sleep(2)
             uid = (yield from count([qepro], md=_md))
 
-    # yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
+    yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
 
     if csv_path!=None or plot==True:
         yield from bps.sleep(2)

@@ -1,14 +1,46 @@
 # Make ophyd listen to pyepics.
 import nslsii
 import ophyd.signal
+import logging
+
+logger = logging.getLogger("startup_profile")
+
+logger.warning("I'm loading the startup profile")
+
+try:
+    from bluesky_queueserver import is_re_worker_active
+except ImportError:
+    # TODO: delete this when 'bluesky_queueserver' is distributed as part of collection environment
+    def is_re_worker_active():
+        return False
 
 ophyd.signal.EpicsSignal.set_defaults(connection_timeout=5)
 # See docstring for nslsii.configure_base() for more details
 # this command takes away much of the boilerplate for settting up a profile
 # (such as setting up best effort callbacks etc)
-nslsii.configure_base(get_ipython().user_ns, 'xpd', pbar=True, bec=True,
-                      magics=True, mpl=True, epics_context=False,
-                      publish_documents_with_kafka=True)
+
+if not is_re_worker_active():
+    nslsii.configure_base(get_ipython().user_ns, 'xpd', pbar=True, bec=True,
+                        magics=True, mpl=True, epics_context=False,
+                        publish_documents_with_kafka=True)
+else:
+    nslsii.configure_base(dict(), 'xpd', configure_logging=True, publish_documents_with_kafka=True)
+
+
+# #### Test config for Kafka
+# from bluesky import RunEngine
+# from databroker import Broker
+# from bluesky.callbacks.best_effort import BestEffortCallback
+
+# RE = RunEngine({})
+# db = Broker.named("xpd")
+# bec = BestEffortCallback()
+
+# RE.subscribe(db.insert)
+# RE.subscribe(bec)
+# res = nslsii.configure_kafka_publisher(RE, beamline_name="xpd")
+
+
 
 # At the end of every run, verify that files were saved and
 # print a confirmation message.

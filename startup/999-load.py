@@ -39,6 +39,8 @@ from xpdacq.glbl import glbl
 from xpdacq.beamtimeSetup import (start_xpdacq, _start_beamtime,
                                   _end_beamtime)
 
+print("starting xpdacq")
+
 bt = start_xpdacq()
 if bt is not None:
     print("INFO: Reload beamtime objects:\n{}\n".format(bt))
@@ -58,7 +60,14 @@ xrun.md['facility'] = glbl['facility']
 
 # TODO: fix for queueserver - need to exclude interaction:
 # /opt/bluesky/queueserver/queueserver-config.yml - check for existence of this file and load silently...
-beamline_config = _load_beamline_config(glbl['blconfig_path'])
+
+
+print("loading beamline config")
+
+# removing human input for automating queueserver setup by setting test=True
+beamline_config = _load_beamline_config(glbl['blconfig_path'], test=True)
+
+print("loaded beamline config")
 
 xrun.md['beamline_config'] = beamline_config
 
