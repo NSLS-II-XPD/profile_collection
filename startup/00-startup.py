@@ -2,10 +2,13 @@
 import nslsii
 import ophyd.signal
 import logging
+from IPython import get_ipython
+
+ip = get_ipython()
+
+print(f"Loading {__file__} from {ip.profile_dir.startup_dir}.")
 
 logger = logging.getLogger("startup_profile")
-
-logger.warning("I'm loading the startup profile")
 
 try:
     from bluesky_queueserver import is_re_worker_active
@@ -19,13 +22,17 @@ ophyd.signal.EpicsSignal.set_defaults(connection_timeout=5)
 # this command takes away much of the boilerplate for settting up a profile
 # (such as setting up best effort callbacks etc)
 
-if not is_re_worker_active():
+# if not is_re_worker_active():
+if True:
     nslsii.configure_base(get_ipython().user_ns, 'xpd', pbar=True, bec=True,
                         magics=True, mpl=True, epics_context=False,
                         publish_documents_with_kafka=True)
 else:
     nslsii.configure_base(dict(), 'xpd', configure_logging=True, publish_documents_with_kafka=True)
 
+del one_1d_step
+del one_nd_step
+del one_shot
 
 # #### Test config for Kafka
 # from bluesky import RunEngine
