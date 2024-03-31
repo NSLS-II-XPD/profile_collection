@@ -1,6 +1,4 @@
-print(f"Loading {__file__} from {ip.profile_dir.startup_dir}.")
-
-"""Plan for running pgcam AE with a gradient TiCu sample."""
+"""Plan for running gpcam AE with a gradient TiCu sample."""
 import uuid
 import itertools
 import time

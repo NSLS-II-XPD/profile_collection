@@ -1,5 +1,3 @@
-print(f"Loading {__file__} from {ip.profile_dir.startup_dir}.")
-
 import itertools
 import bluesky.plan_stubs as bps
 
@@ -74,7 +72,7 @@ def batch_scan(
     rocking_num=3,
     real_motors,
     exposure=20,
-    take_data=None,  # stepping_ct,
+    take_data=None,
     transform_pair
 ):
     if take_data is None:
