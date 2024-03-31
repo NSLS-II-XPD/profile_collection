@@ -1,3 +1,5 @@
+print(f"Loading {__file__} from {ip.profile_dir.startup_dir}.")
+
 """Plan for running pgcam AE with a gradient TiCu sample."""
 import uuid
 import itertools
@@ -192,7 +194,7 @@ def adaptive_plan(
     reccomender_timeout=1,
     exposure=30,
     max_runs=1,
-    take_data=rocking_ct,
+    take_data=None,
     num=None,
     rocking_range=2,
 ):
@@ -270,6 +272,8 @@ def adaptive_plan(
         it up for dead.
 
     """
+    if take_data is None:
+        take_data=rocking_ct
 
     # unpack the real motors
     x_motor, y_motor = real_motors

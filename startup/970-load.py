@@ -50,6 +50,8 @@ if reload_glbl_dict is not None:
 # import necessary modules
 from xpdacq.xpdacq import *
 from xpdacq.beamtime import *
+del Tlist
+del Tramp
 from xpdacq.utils import import_sample_info
 
 # instantiate xrun without beamtime, like bluesky setup
