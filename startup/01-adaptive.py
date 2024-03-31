@@ -1,5 +1,3 @@
-print(f"Loading {__file__} from {ip.profile_dir.startup_dir}.")
-
 """Structures and helpers to defined sample layout."""
 
 import json

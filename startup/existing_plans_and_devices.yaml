@@ -14201,6 +14201,51 @@ existing_plans:
       name: num_loops
     properties:
       is_generator: true
+  Tramp_gas_plan:
+    description: Tramp-type scan with rga gas reading
+    module: __main__
+    name: Tramp_gas_plan
+    parameters:
+    - description: List of detectors will be triggered and recored.
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: detectors
+    - description: 'e.g., ''He'', default is ''He''
+
+        These gas must be in `gas.gas_list` but they may be in any order.'
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: gas_in
+    - description: exposure time in seconds
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: exp_time
+    - description: starting point of temperature sequence.
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: Tstart
+    - description: stoping point of temperature sequence.
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: Tstop
+    - description: step size between Tstart and Tstop of this sequence.
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: Tstep
+    - default: '[''mass1'', ''mass2'', ''mass3'', ''mass4'', ''mass5'', ''mass6'']'
+      description: a list of rga masses will be appearing in a live table
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: rga_masses
+    properties:
+      is_generator: true
   _extract_motor_pos:
     module: __main__
     name: _extract_motor_pos

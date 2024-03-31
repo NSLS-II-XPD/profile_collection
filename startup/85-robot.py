@@ -195,11 +195,11 @@ def tseries(sample, exposure, num):
     yield from plan
 
 
-# def Tramp(sample, exposure, start, stop, step):
-#     Tpoints = np.arange(start, stop, step)
-#     plan = subs_wrapper(list_scan([pec1], cs700, points), LiveTable([cs700]))
-#     # plan = robot_wrapper(plan, sample)
-#     yield from plan
+def Tramp(sample, exposure, start, stop, step):
+    Tpoints = np.arange(start, stop, step)
+    plan = subs_wrapper(list_scan([pec1], cs700, points), LiveTable([cs700]))
+    # plan = robot_wrapper(plan, sample)
+    yield from plan
 
 
 # Define list of sample info.
