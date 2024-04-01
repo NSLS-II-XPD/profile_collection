@@ -100,3 +100,10 @@ def xray_uvvis_plan(det1, det2, *args, md=None, num_abs=10, num_flu=10, sample_t
         yield from bps.save()
 
     yield from trigger_two_detectors()
+
+
+def record_metadata(peak_emission, fwhm, plqy, md={}):
+    """TEMPORARY SOLUTION!!! Implement a proper solution for saving analysis/processed data into tiled."""
+    md["plan_name"] = "record_metadata"
+    md["optical_property"] = {'Peak': peak_emission, 'FWHM': fwhm, 'PLQY': plqy}
+    yield from bp.count([], md=md)
