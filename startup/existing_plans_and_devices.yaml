@@ -16083,6 +16083,29 @@ existing_plans:
       name: obj
     properties:
       is_generator: true
+  record_metadata:
+    module: __main__
+    name: record_metadata
+    parameters:
+    - kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: peak_emission
+    - kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: fwhm
+    - kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: plqy
+    - default: '{}'
+      kind:
+        name: POSITIONAL_OR_KEYWORD
+        value: 1
+      name: md
+    properties:
+      is_generator: true
   rel_adaptive_scan:
     description: Relative scan over one variable with adaptively tuned step size.
     module: bluesky.plans
