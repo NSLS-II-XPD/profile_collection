@@ -175,10 +175,6 @@ def Ecal(wguess, detectors=None, motor=None, coarse_step=.0012, coarse_nsteps=12
             the coarse scan
         motor_type : str, optional
             the type of motor used, ether "th" (theta) or "tth"(two-theta)
-
-        Example
-        -------
-
     '''
     if detectors is None:
         detectors = [sc]

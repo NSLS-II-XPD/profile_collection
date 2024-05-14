@@ -162,18 +162,23 @@ def xpd_mscan_flt(sample_list, pos_list, ht_list, scanplan, motor=sample_x, dela
 # -----start temperature scan plans ------------------
 
 def xpd_temp_list(smpl, Temp_list, exp_time, delay=1, dets=[]):
-    '''
-    example
-        xpd_temp_list(1, [300, 350, 400], 5, delay=1)
-        sample 1, at temperature 300, 350 and 400, exposure time 5sec, wait 1 second after each temperature.
+    '''The plan to perform a scan over temperature list.
 
-        parameters:
-        smpl: sample index ID in sample list
-        Temp_list: temperature list
-        exp_time : total exposure time for each sample, in seconds
-        delay: sleep time after each temperature changes, for temperature controller to stable
-        dets: list of motors, temperatures controllers, which will be recorded in table.
+    Parameters
+    ----------
 
+    smpl: sample index ID in sample list
+    Temp_list: temperature list
+    exp_time : total exposure time for each sample, in seconds
+    delay: sleep time after each temperature changes, for temperature controller to stable
+    dets: list of motors, temperatures controllers, which will be recorded in table.
+
+    Examples
+    --------
+
+    >>> xpd_temp_list(1, [300, 350, 400], 5, delay=1)
+
+    sample 1, at temperature 300, 350 and 400, exposure time 5sec, wait 1 second after each temperature.
     '''
     #RE(_configure_area_det(exp_time))
     T_controller = xpd_configuration["temp_controller"]
@@ -193,16 +198,19 @@ def xpd_temp_list(smpl, Temp_list, exp_time, delay=1, dets=[]):
 
 def xpd_temp_ramp(smpl, Tstart, Tstop, Tstep, exp_time, delay = 1, dets=[]):
     '''
-    example:
-        xpd_temp_ramp(1, 300, 400, 10, 5, delay=1)
-        sample 1, from 300K to 400K, 10K steps, exposure time 5sec, wait 1 second after each temperature.
+    Parameters
+    ----------
+    smpl: sample index ID in sample list
+    Tstart, Tstop, Tstep: temperature range(Tstart, Tend), step size: Tstep
+    scanplan : scanplan index ID in scanplan list
+    delay: sleep time after each temperature changes, for temperature controller to stable
+    dets: list of motors, temperatures controllers, which will be recorded in table.
 
-        parameters:
-        smpl: sample index ID in sample list
-        Tstart, Tstop, Tstep: temperature range(Tstart, Tend), step size: Tstep
-        scanplan : scanplan index ID in scanplan list
-        delay: sleep time after each temperature changes, for temperature controller to stable
-        dets: list of motors, temperatures controllers, which will be recorded in table.
+    Examples
+    --------
+    >>> xpd_temp_ramp(1, 300, 400, 10, 5, delay=1)
+
+    sample 1, from 300K to 400K, 10K steps, exposure time 5sec, wait 1 second after each temperature.
     '''
     #RE(_configure_area_det(exp_time))
     T_controller = xpd_configuration["temp_controller"]
