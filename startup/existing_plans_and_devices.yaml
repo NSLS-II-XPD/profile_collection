@@ -5408,6 +5408,49 @@ existing_devices:
         is_movable: true
         is_readable: true
         module: ophyd.mixins
+      setread:
+        classname: EpicsSignalPositioner
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.mixins
+      temperature:
+        classname: EpicsSignalPositioner
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.mixins
+    is_flyable: false
+    is_movable: false
+    is_readable: true
+    module: __main__
+  eurotherm2:
+    classname: Eurotherm
+    components:
+      mode:
+        classname: EpicsSignal
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.signal
+      power:
+        classname: EpicsSignalPositioner
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.mixins
+      ramprate:
+        classname: EpicsSignalPositioner
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.mixins
+      setread:
+        classname: EpicsSignalPositioner
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.mixins
       temperature:
         classname: EpicsSignalPositioner
         is_flyable: false
@@ -6241,6 +6284,12 @@ existing_devices:
         is_readable: true
         module: ophyd.mixins
       ramprate:
+        classname: EpicsSignalPositioner
+        is_flyable: false
+        is_movable: true
+        is_readable: true
+        module: ophyd.mixins
+      setread:
         classname: EpicsSignalPositioner
         is_flyable: false
         is_movable: true
@@ -14987,7 +15036,7 @@ existing_plans:
     properties:
       is_generator: true
   excel_example:
-    description: 'Example: RE(excel_example(''/XF28IDC/XF28ID2/pe2_data/xpdUser/Import/example-with-dan.xlsx''))'
+    description: Excel example plan.
     module: __main__
     name: excel_example
     parameters:
@@ -15285,7 +15334,7 @@ existing_plans:
     properties:
       is_generator: true
   gas_plan:
-    description: 'Example:'
+    description: The plan to switch gases.
     module: __main__
     name: gas_plan
     parameters:
@@ -15305,7 +15354,7 @@ existing_plans:
     properties:
       is_generator: true
   gas_plan_with_detector:
-    description: 'Example:'
+    description: The plan to switch gases with a detector.
     module: __main__
     name: gas_plan_with_detector
     parameters:

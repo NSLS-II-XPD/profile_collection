@@ -48,8 +48,6 @@ if reload_glbl_dict is not None:
 # import necessary modules
 from xpdacq.xpdacq import *
 from xpdacq.beamtime import *
-del Tlist
-del Tramp
 from xpdacq.utils import import_sample_info
 
 # instantiate xrun without beamtime, like bluesky setup
@@ -58,14 +56,15 @@ xrun.md['beamline_id'] = glbl['beamline_id']
 xrun.md['group'] = glbl['group']
 xrun.md['facility'] = glbl['facility']
 
-# TODO: fix for queueserver - need to exclude interaction:
-# /opt/bluesky/queueserver/queueserver-config.yml - check for existence of this file and load silently...
-
-
 print("loading beamline config")
 
-# removing human input for automating queueserver setup by setting test=True
-beamline_config = _load_beamline_config(glbl['blconfig_path'], test=True)
+if is_re_worker_active():  # running in queueserver
+    del Tlist
+    del Tramp
+    # removing human input for automating queueserver setup by setting test=True
+    beamline_config = _load_beamline_config(glbl['blconfig_path'], test=True)
+else:
+    beamline_config = _load_beamline_config(glbl['blconfig_path'])
 
 print("loaded beamline config")
 
@@ -100,12 +99,6 @@ from xpdacq.calib import *
 
 print('OK, ready to go.  To continue, follow the steps in the xpdAcq')
 print('documentation at http://xpdacq.github.io/xpdacq\n')
-''' 
-bt = start_xpdacq()
-if bt is not None:
-    print("INFO: Reload beamtime objects:\n{}\n".format(bt))
-if reload_glbl_dict is not None:
-    _set_glbl(glbl, reload_glbl_dict)
 
 
 class MoreCustomizedRunEngine(CustomizedRunEngine):
@@ -116,7 +109,7 @@ class MoreCustomizedRunEngine(CustomizedRunEngine):
 from nslsii import configure_kafka_publisher
 from bluesky.utils import ts_msg_hook
 
-RE = MoreCustomizedRunEngine(None)
+RE = MoreCustomizedRunEngine(None)  # This object is like 'xrun', but with the RE API.
 # RE.msg_hook = ts_msg_hook
 
 configure_kafka_publisher(RE, beamline_name='xpd')
@@ -126,8 +119,3 @@ RE.md = {}
 RE.subscribe(db.insert, "all")
 RE.beamtime = bt
 RE.clear_suspenders()
-
-
-
-'''
-

@@ -158,8 +158,9 @@ def robot_wrapper(plan, sample):
     sample : dict
         must contain 'position'; optionally also 'geometry'
 
-    Example
-    -------
+    Examples
+    --------
+
     >>> plan = count([pe1c])
     >>> new_plan = robot_wrapper(plan, {'position': 1})
     """
@@ -219,8 +220,12 @@ def example():
 
 
 def excel_example(filename, geometry=None):
-    """
-    Example: RE(excel_example('/XF28IDC/XF28ID2/pe2_data/xpdUser/Import/example-with-dan.xlsx'))
+    """Excel example plan.
+
+    Examples
+    --------
+
+    >>> RE(excel_example('/XF28IDC/XF28ID2/pe2_data/xpdUser/Import/example-with-dan.xlsx'))
     """
     import pandas as pd
     f = pd.ExcelFile(filename)
