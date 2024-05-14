@@ -39,8 +39,6 @@ from xpdacq.glbl import glbl
 from xpdacq.beamtimeSetup import (start_xpdacq, _start_beamtime,
                                   _end_beamtime)
 
-print("starting xpdacq")
-
 bt = start_xpdacq()
 if bt is not None:
     print("INFO: Reload beamtime objects:\n{}\n".format(bt))
