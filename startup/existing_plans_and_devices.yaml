@@ -16084,6 +16084,8 @@ existing_plans:
     properties:
       is_generator: true
   record_metadata:
+    description: TEMPORARY SOLUTION!!! Implement a proper solution for saving analysis/processed
+      data into tiled.
     module: __main__
     name: record_metadata
     parameters:
