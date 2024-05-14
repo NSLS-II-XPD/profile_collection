@@ -148,9 +148,14 @@ class Eurotherm(Device):
         write_pv='Rate:Ramp-SP',
         tolerance=1
     )
-
+    setread = Cpt(
+        EpicsSignalPositioner,
+        'Disp-Line2',
+        #write_pv='Rate:Ramp-SP',
+        tolerance=1
+    )
 eurotherm = Eurotherm('XF:28IDC-ES:1{Env:04}', name='eurotherm')
-
+eurotherm2 = Eurotherm('XF:28IDC-ES:1{Env:06}', name='eurotherm2')
 hotairblower = Eurotherm('XF:28IDC-ES:1{Env:03}', name='hotairblower')
 
 '''

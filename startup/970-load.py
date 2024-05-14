@@ -102,8 +102,7 @@ from xpdacq.calib import *
 
 print('OK, ready to go.  To continue, follow the steps in the xpdAcq')
 print('documentation at http://xpdacq.github.io/xpdacq\n')
-
-
+''' 
 bt = start_xpdacq()
 if bt is not None:
     print("INFO: Reload beamtime objects:\n{}\n".format(bt))
@@ -116,11 +115,12 @@ class MoreCustomizedRunEngine(CustomizedRunEngine):
         super().__call__({}, plan, *args, **kwargs)
 
 
+from nslsii import configure_kafka_publisher
 from bluesky.utils import ts_msg_hook
+
 RE = MoreCustomizedRunEngine(None)
 # RE.msg_hook = ts_msg_hook
-xrun = RE
-from nslsii import configure_kafka_publisher
+
 configure_kafka_publisher(RE, beamline_name='xpd')
 RE.md = {}
 #RE.md.update(xrun.md)
@@ -128,3 +128,8 @@ RE.md = {}
 RE.subscribe(db.insert, "all")
 RE.beamtime = bt
 RE.clear_suspenders()
+
+
+
+'''
+
