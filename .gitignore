@@ -88,3 +88,6 @@ history*.sqlite
 acceptance_tests/307_demo.csv
 acceptance_tests/mydata.xlsx
 startup/.ipynb_checkpoints/ 
+
+# pdfstream config files:
+xpd*.ini
