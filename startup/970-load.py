@@ -50,11 +50,16 @@ from xpdacq.xpdacq import *
 from xpdacq.beamtime import *
 from xpdacq.utils import import_sample_info
 
+# Metadata for both 'RE' and 'xrun':
+md = {}
+md['beamline_id'] = glbl['beamline_id']
+md['group'] = glbl['group']
+md['facility'] = glbl['facility']
+md.update({"cycle": "commissioning", "proposal_id": "pass-315985"})
+
 # instantiate xrun without beamtime, like bluesky setup
 xrun = CustomizedRunEngine(None)
-xrun.md['beamline_id'] = glbl['beamline_id']
-xrun.md['group'] = glbl['group']
-xrun.md['facility'] = glbl['facility']
+xrun.md.update(md)
 
 print("loading beamline config")
 
@@ -113,8 +118,8 @@ RE = MoreCustomizedRunEngine(None)  # This object is like 'xrun', but with the R
 # RE.msg_hook = ts_msg_hook
 
 configure_kafka_publisher(RE, beamline_name='xpd')
-RE.md = {}
-#RE.md.update(xrun.md)
+RE.md.update(md)
+
 # insert header to db, either simulated or real
 RE.subscribe(db.insert, "all")
 RE.beamtime = bt

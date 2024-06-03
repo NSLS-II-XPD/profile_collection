@@ -1,7 +1,13 @@
+import os
+
+from bluesky import plan_stubs as bps
+from bluesky import preprocessors as bpp
+from functools import partial
+
 '''
 BS_ENV=2023-1.3-py310-tiled bsui
 
-pump_list = [dds1_p1, dds1_p2]
+pump_list = [dds1_p1, dds1_p2]False
 syringe_list = [50, 50]
 target_vol_list = ['30 ml', '30 ml']
 infuse_rates = ['100 ul/min', '100 ul/min']
@@ -9,6 +15,7 @@ precursor_list = ['CsPbOA', 'ToABr']
 mixer = ['30 cm']
 syringe_mater_list=['steel', 'steel']
 '''
+
 
 def reset_pumps(pump_list, clear=True, update = '.2 second'):
     for pump in pump_list:
@@ -213,6 +220,17 @@ def take_ref_bkg_q(integration_time=15, num_spectra_to_average=16,
 
 
 
+def count_stream(det, stream_name="primary", md=None):
+    """Count a detector and emit documents in a specified stream."""
+    @bpp.stage_decorator([det])
+    @bpp.run_decorator(md=md)
+    def _inner_count():
+        yield from bps.trigger(det)
+        yield from bps.create(name=stream_name)
+        reading = (yield from bps.read(det))
+        yield from bps.save()
+
+    yield from _inner_count()
 
 
 def take_a_uvvis_csv_q(sample_type='test', plot=False, csv_path=None, data_agent='tiled',
@@ -243,7 +261,8 @@ def take_a_uvvis_csv_q(sample_type='test', plot=False, csv_path=None, data_agent
 
     # qepro.correction.put(correction_type)
     # qepro.spectrum_type.put(spectrum_type)
-
+    
+    
     if spectrum_type == 'Absorbtion':
         if LED.get()=='Low' and UV_shutter.get()=='High' and qepro.correction.get()==correction_type and qepro.spectrum_type.get()==spectrum_type:
             uid = (yield from count([qepro], md=_md))
@@ -254,10 +273,8 @@ def take_a_uvvis_csv_q(sample_type='test', plot=False, csv_path=None, data_agent
             # yield from shutter_open()
             yield from bps.mv(LED, 'Low', UV_shutter, 'High')
             yield from bps.sleep(2)
-            uid = (yield from count([qepro], md=_md))
+            uid = (yield from count_stream(qepro, stream_name="take_a_uvvis", md=_md))
     
-
-
     else:
         if LED.get()=='High' and UV_shutter.get()=='Low' and qepro.correction.get()==correction_type and qepro.spectrum_type.get()==spectrum_type:
             uid = (yield from count([qepro], md=_md))
@@ -268,8 +285,9 @@ def take_a_uvvis_csv_q(sample_type='test', plot=False, csv_path=None, data_agent
             # yield from LED_on()
             yield from bps.mv(LED, 'High', UV_shutter, 'Low')
             yield from bps.sleep(2)
-            uid = (yield from count([qepro], md=_md))
+            uid = (yield from count_stream(qepro, stream_name="take_a_uvvis", md=_md))
 
+    # yield from bps.create(name="take_a_uvvis")
     yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
 
     if csv_path!=None or plot==True:
@@ -310,7 +328,7 @@ def wait_equilibrium(pump_list, mixer, ratio=1, tubing_ID_mm=1.016):
         rate = infuse_rates[i]
         rate_unit = infuse_rate_unit[i]
         unit_const = vol_unit_converter(v0=rate_unit[:2], v1='ul')/t_unit_converter(t0=rate_unit[3:], t1='min')
-        total_rate += rate*unit_const
+        total_rate += rate*unit_constBLUESKY_PREDECLARE
 
     l = []
     for i in mixer:
