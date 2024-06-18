@@ -39,6 +39,47 @@ from xpdacq.glbl import glbl
 from xpdacq.beamtimeSetup import (start_xpdacq, _start_beamtime,
                                   _end_beamtime)
 
+import httpx
+from pprint import pformat
+
+
+def pass_start_beamtime(proposal_num, wavelength, experimenters=[], test=False, commissioning=False):
+    # Copied from NSLS2/start-experiment:
+    nslsii_api_client = httpx.Client(base_url="https://api.nsls2.bnl.gov")
+    cycle_response = nslsii_api_client.get("/v1/facility/nsls2/cycles/current").raise_for_status()
+    if not commissioning:
+        cycle = cycle_response.json()["cycle"]
+    else:
+        cycle = "commissioning"
+    
+    proposal_response = nslsii_api_client.get(f"/v1/proposal/{proposal_num}").raise_for_status()
+    proposal_json = proposal_response.json()["proposal"]
+    data_session = proposal_json["data_session"]
+    all_safs = proposal_json["safs"]
+    # TODO: implement some logic here if there are more than 1 safs.
+    first_saf = all_safs[0]
+    instruments = first_saf["instruments"]
+    if "XPD" not in instruments:
+        raise ValueError(f"XPD is not in the list of instruments: {instruments}")
+    saf_num = first_saf["saf_id"]
+    
+    PI_last = None
+    all_users = proposal_json["users"]
+    for user in all_users:
+        if user["is_pi"]:
+            PI_last = user["last_name"]
+            break
+    if PI_last is None:
+        raise ValueError(f"PI information was not found in this list of users:\n{pformat(all_users)}")
+
+    bt = _start_beamtime(PI_last, saf_num, experimenters=experimenters, wavelength=wavelength, test=test)
+
+    bt["cycle"] = cycle
+    bt["data_session"] = data_session
+    
+    return bt
+
+
 bt = start_xpdacq()
 if bt is not None:
     print("INFO: Reload beamtime objects:\n{}\n".format(bt))
@@ -55,8 +96,8 @@ md = {}
 md['beamline_id'] = glbl['beamline_id']
 md['group'] = glbl['group']
 md['facility'] = glbl['facility']
-md.update({"cycle": "commissioning", "proposal_id": "pass-315985"})
-
+#md.update({"cycle": "2024-2", "proposal_id": "pass-315035"})
+#md.update({"cycle": "commissioning", "proposal_id": "pass-315985"})
 # instantiate xrun without beamtime, like bluesky setup
 xrun = CustomizedRunEngine(None)
 xrun.md.update(md)

@@ -118,13 +118,11 @@ class Robot(Device):
 
 # Define custom commands for sample loading/unloading.
 
-@asyncio.coroutine
-def _load_sample(msg):
+async def _load_sample(msg):
     msg.obj.load_sample(*msg.args, **msg.kwargs)
 
 
-@asyncio.coroutine
-def _unload_sample(msg):
+async def _unload_sample(msg):
     msg.obj.unload_sample(*msg.args, **msg.kwargs)
 
 
