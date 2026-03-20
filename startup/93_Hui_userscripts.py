@@ -414,7 +414,7 @@ def xyposscan(smpl, exp_time, posxlist, posylist, motorx=sample_x, motory=sample
 
 
 def mrun_2det(smplist_pdf, smplist_xrd, posxlist, exp_pdf, exp_xrd, posylist=None, smpl_h=None, delay=1,
-               pdf_pos=[0, 255], xrd_pos=[400, 275], num_pdf=1, num_xrd=1, pdf_flt_h=None, pdf_flt=None, xrd_flt=None,
+               pdf_pos=[0, 255], xrd_pos=[400, 280], num_pdf=1, num_xrd=1, pdf_flt_h=None, pdf_flt=None, xrd_flt=None,
                motorx=sample_x, motory=sample_y, pdf_frame_acq=0.2, xrd_frame_acq=0.2, dets=[pe1_z], confirm=True):
     '''
     Multiple samples, do pdf and xrd for one sample, then move to the next sample
@@ -504,7 +504,7 @@ def mrun_2det(smplist_pdf, smplist_xrd, posxlist, exp_pdf, exp_xrd, posylist=Non
 
 def mrun_2det_batch(smplist_pdf, smplist_xrd, posxlist, posylist=None, 
                       exp_pdf=None, exp_xrd=None, delay=1, 
-                      smpl_h=None, pdf_pos=[0, 255], xrd_pos=[400, 275], 
+                      smpl_h=None, pdf_pos=[0, 255], xrd_pos=[400, 280], 
                       num_pdf=1, num_xrd=1, pdf_flt_h=None, 
                       pdf_flt=None, xrd_flt=None, motorx=sample_x, 
                       motory=sample_y, pdf_frame_acq=0.2, 
@@ -574,8 +574,8 @@ def mrun_2det_batch(smplist_pdf, smplist_xrd, posxlist, posylist=None,
     glbl["auto_load_calib"] = False
 
     # Load calibration files
-    xrd_calib = load_calibration_md('config_base/xrd.poni')
-    pdf_calib = load_calibration_md('config_base/pdf.poni')
+    xrd_calib = load_calibration_md2('/nsls2/data/xpd-new/legacy/processed/xpdUser/config_base/xrd.poni')
+    pdf_calib = load_calibration_md2('/nsls2/data/xpd-new/legacy/processed/xpdUser/config_base/pdf.poni')
 
     # Detector positions
     #pdf_pe1x, pdf_pe1z = pdf_pos
@@ -634,7 +634,7 @@ def mrun_2det_batch(smplist_pdf, smplist_xrd, posxlist, posylist=None,
     glbl["auto_load_calib"] = True
 
 
-def run_2det(smpl_pdf, smpl_xrd, exp_pdf, exp_xrd, pdf_pos=[0, 255], xrd_pos=[400, 275], num_pdf=1, num_xrd=1,
+def run_2det(smpl_pdf, smpl_xrd, exp_pdf, exp_xrd, pdf_pos=[0, 255], xrd_pos=[400, 280], num_pdf=1, num_xrd=1,
              pdf_flt=None, xrd_flt=None, pdf_frame_acq=0.2, xrd_frame_acq=0.2, dets=None, confirm=True):
     '''
       Perform PDF and XRD measurements for one sample using two detectors.
@@ -683,8 +683,8 @@ def run_2det(smpl_pdf, smpl_xrd, exp_pdf, exp_xrd, pdf_pos=[0, 255], xrd_pos=[40
     glbl["auto_load_calib"] = False
 
     # Load calibration files for both PDF and XRD
-    xrd_calib = load_calibration_md('config_base/xrd.poni')
-    pdf_calib = load_calibration_md('config_base/pdf.poni')
+    xrd_calib = load_calibration_md2('config_base/xrd.poni')
+    pdf_calib = load_calibration_md2('config_base/pdf.poni')
 
     #pdf_pe1x, pdf_pe1z = pdf_pos
     #xrd_pe1x, xrd_pe1z = xrd_pos
@@ -818,7 +818,7 @@ def run_xrd(smpl, exp_xrd, num=1, xrd_pos=[400, 280], calib_file='config_base/xr
 
     # Load the calibration file
     try:
-        xrd_calib = load_calibration_md(calib_file)
+        xrd_calib = load_calibration_md2(calib_file)
         print(f"Calibration file {calib_file} loaded successfully.")
     except FileNotFoundError:
         raise FileNotFoundError(f"Calibration file '{calib_file}' not found.")
@@ -858,7 +858,7 @@ def run_pdf(smpl, exp_pdf, num=1, pdf_pos=[0, 255], safe_out=280, calib_file='co
 
     # Load the calibration file
     try:
-        pdf_calib = load_calibration_md(calib_file)
+        pdf_calib = load_calibration_md2(calib_file)
         print(f"Calibration file {calib_file} loaded successfully.")
     except FileNotFoundError:
         raise FileNotFoundError(f"Calibration file '{calib_file}' not found.")

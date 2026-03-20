@@ -671,7 +671,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xorg-libxtst-1.2.5-hb9d3cd8_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xorg-libxxf86vm-1.1.6-hb9d3cd8_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xorg-xorgproto-2025.1-hb03c661_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/xpdacq-1.1.4-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/xpdacq-1.0.0-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/xpdan-0.8.2-py_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/xpdconf-0.4.6-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/xpdsim-0.4.3-pyhd8ed1ab_0.tar.bz2
@@ -1360,7 +1360,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xorg-libxtst-1.2.5-hb9d3cd8_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xorg-libxxf86vm-1.1.6-hb9d3cd8_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xorg-xorgproto-2025.1-hb03c661_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/xpdacq-1.1.4-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/xpdacq-1.0.0-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/xpdan-0.8.2-py_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/xpdconf-0.4.6-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/xpdsim-0.4.3-pyhd8ed1ab_0.tar.bz2
@@ -11156,34 +11156,29 @@ packages:
   purls: []
   size: 570010
   timestamp: 1766154256151
-- conda: https://conda.anaconda.org/conda-forge/noarch/xpdacq-1.1.4-pyhd8ed1ab_0.conda
-  sha256: a26391291de5df8c7c2dd5752ba69d51d04f4908935af6434c3841ed3001be18
-  md5: 187c0f156c58186dfa530fcca5ecb134
+- conda: https://conda.anaconda.org/conda-forge/noarch/xpdacq-1.0.0-pyhd8ed1ab_0.tar.bz2
+  sha256: f503a8019a0f14ae47cf8b80528848e7e4bb55bf8adc8b45eb16fad5c711e9ae
+  md5: 6bfc2968c5a851bc50deae0d63cb0f5c
   depends:
   - bluesky
-  - bluesky-darkframes
   - databroker
-  - fabio
-  - frozendict
   - ipython
   - numpy
-  - openpyxl
   - ophyd
   - pandas
   - pyfai
-  - pyopencl
-  - python >=3.8
+  - python >=3
   - pyyaml
-  - tifffile
   - xlrd
-  - xpdconf >=0.4.6
-  - xpdsim >=0.4.3
+  - xpdan
+  - xpdconf
+  - xpdsim
   license: BSD-3-Clause
   license_family: BSD
   purls:
   - pkg:pypi/xpdacq?source=hash-mapping
-  size: 90137
-  timestamp: 1671122428396
+  size: 79118
+  timestamp: 1634938615561
 - conda: https://conda.anaconda.org/conda-forge/noarch/xpdan-0.8.2-py_0.tar.bz2
   sha256: 08a7a6c81eaa8d24d71138334e12f9ca787a7a114256f95370c1b12f47db71b1
   md5: 11b4406906b03b29238ad17daacebc79

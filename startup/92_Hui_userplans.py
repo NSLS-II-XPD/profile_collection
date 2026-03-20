@@ -8,15 +8,17 @@ def ion_chamber_out(y=-10):
     #ecal_x.move(x)
     ecal_y.move(y)
 
-def takeone(sample, exp_time, num=1, delay_num=0, dets=[] ):
+def takeone(sample, exp_time, num=1, delay_num=0, dets=None ):
     """ take one data, collect both det and ion_chamber data
 
     parameter:
     sample (int): sample name(index) in sample list
-    dets (list): list of detectors, default: [ion_chamber]
+    dets (list): list of detectors, default: []
     exp_time (float): exposure time in seconds
 
     """
+    if dets is None:
+        dets = []
     area_det = xpd_configuration['area_det']
     dets=[area_det] + dets
     delay_num = delay_num + exp_time
@@ -60,7 +62,22 @@ def plan_with_calib(dets, exp_time, num, calib_file, md=None):
     plan = count_with_calib(dets, num, calibration_md=calib_file, md=_md)
     plan = bpp.subs_wrapper(plan, LiveTable(motors))
     yield from plan
+    
+def load_calibration_md2(poni_file: str) -> dict:
+    """Load the calibration metadata in a dictionary from a .poni file.
 
+    Parameters
+    ----------
+    poni_file :
+        The path to the .poni file.
+
+    Returns
+    -------
+    calibration_md :
+        The metadata in a dictionary.
+    """
+    ai = pyFAI.load(poni_file)
+    return dict(ai.get_config())
 
 def count_with_calib(detectors: list, num: int = 1, delay: float = None, *, calibration_md: dict = None,
                      md: dict = None):
@@ -309,7 +326,7 @@ def xyposplan(exp_time, posxlist, posylist, motorx=None, motory=None, md=None, d
     plan = bpp.plan_mutator(plan, inner_shutter_control)
     yield from plan
 
-def take_one_dark(sample, exp_time, dets=[]):
+def take_one_dark(sample, exp_time, dets=None):
     """ take one data with dark image, then set dark window to 1000 minutes
 
     parameter:
@@ -318,6 +335,8 @@ def take_one_dark(sample, exp_time, dets=[]):
     exp_time (float): exposure time in seconds
 
     """
+    if dets is None:
+        dets = []
     area_det = xpd_configuration['area_det']
     dets=[area_det] + dets
     glbl['dk_window'] = 0.1
