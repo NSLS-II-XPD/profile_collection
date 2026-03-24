@@ -117,7 +117,11 @@ if is_re_worker_active():  # running in queueserver
     # insert header to db, either simulated or real
     RE.subscribe(tiled_inserter.insert, "all")
     
-    bt = _start_beamtime("Lin", saf_num="12345", experimenters=[], wavelength=0.0)
+    from xpdacq.beamtimeSetup import (start_xpdacq, _start_beamtime,
+                                      _end_beamtime)
+
+    bt = start_xpdacq()
+    # bt = _start_beamtime("Lin", saf_num="12345", experimenters=[], wavelength=0.0)
     if bt:
         print(bt)
         RE.clear_suspenders()
