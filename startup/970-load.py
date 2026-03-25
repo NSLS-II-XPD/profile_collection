@@ -120,8 +120,8 @@ if is_re_worker_active():  # running in queueserver
     from xpdacq.beamtimeSetup import (start_xpdacq, _start_beamtime,
                                       _end_beamtime)
 
-    # bt = start_xpdacq()
-    bt = _start_beamtime("Lin", saf_num="318343", experimenters=["Lin"], wavelength=0.1812)
+    bt = start_xpdacq()
+    # bt = _start_beamtime("Lin", saf_num="318343", experimenters=["Lin"], wavelength=0.1812)
     if bt:
         print(bt)
         RE.clear_suspenders()
