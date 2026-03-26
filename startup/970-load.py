@@ -163,7 +163,8 @@ print('documentation at http://xpdacq.github.io/xpdacq\n')
 
 class MoreCustomizedRunEngine(CustomizedRunEngine):
     def __call__(self, plan, *args, **kwargs):
-        super().__call__({}, plan, *args, **kwargs)
+        return super().__call__({}, plan, *args, **kwargs)
+        # return tuple(self._run_start_uids)
 
 
 #from nslsii import configure_kafka_publisher
