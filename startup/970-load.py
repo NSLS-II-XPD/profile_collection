@@ -154,7 +154,7 @@ else:
         pe1c = xpd_pe1c # alias
 
     configure_device(area_det=pe1c, shutter=shctl1,
-                     temp_controller=cs700, db=db,
+                     temp_controller=cs700, db='xpd',
                      filter_bank=fb,
                      ring_current=ring_current,
                      robot=robot)
