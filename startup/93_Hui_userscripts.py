@@ -263,7 +263,7 @@ def mlinescan(smplist, poslist, exp_time, lstart, lend, lpoints, pos_motor=sampl
 
 
 def gridscan(smpl, exp_time, xstart, xstop, xpoints, ystart, ystop, ypoints,
-             motorx=sample_x, motory=sample_y, md=None, dets=None):
+             motorx=sample_x, motory=sample_y, md=None, dets=None, snake=True):
     """
         Perform a grid scan by moving a sample across a grid of x and y points.
 
@@ -282,6 +282,7 @@ def gridscan(smpl, exp_time, xstart, xstop, xpoints, ystart, ystop, ypoints,
             motory (object, optional): Motor object used to move the sample along the y-axis. Default is `sample_y`.
             md (dict, optional): Metadata to be associated with the scan. Default is None.
             det (list, optional): List of extra detectors to record during the scan. Default is None.
+            snake (bool, optional): Whether to use a snake-like pattern for the grid scan. Default is True.
 
         """
 
@@ -292,12 +293,12 @@ def gridscan(smpl, exp_time, xstart, xstop, xpoints, ystart, ystop, ypoints,
     print(f"Exposure time per point: {exp_time} seconds")
 
     # Create the grid scan plan and execute
-    plan = gridplan(exp_time, xstart, xstop, xpoints, ystart, ystop, ypoints, motorx=motorx, motory=motory, md=md, dets=dets)
+    plan = gridplan(exp_time, xstart, xstop, xpoints, ystart, ystop, ypoints, motorx=motorx, motory=motory, md=md, dets=dets, snake=snake)
     xrun(smpl, plan)
 
 
 def mgridscan(smplist, exp_time, xcenter_list, xrange, xpoints, ycenter_list, yrange, ypoints, delay=1,
-              motorx=sample_x, motory=sample_y, smpl_h=None, flt_l=None, flt_h=None, md=None, dets=None):
+              motorx=sample_x, motory=sample_y, smpl_h=None, flt_l=None, flt_h=None, md=None, dets=None,snake=True):
 
     """ Perform grid scan for multiple samples.
 
@@ -324,6 +325,7 @@ def mgridscan(smplist, exp_time, xcenter_list, xrange, xpoints, ycenter_list, yr
             flt_l (list, optional): Filter set for all other samples. Default is None.
             md (dict, optional): Metadata to be associated with the scan. Default is None.
             det (list, optional): Extra detectors to record during the scan. Default is None.
+            snake (bool, optional): Whether to use a snake-like pattern for the grid scan. Default is True.
 
         """
 
@@ -373,7 +375,7 @@ def mgridscan(smplist, exp_time, xcenter_list, xrange, xpoints, ycenter_list, yr
 
         # Create the grid scan plan and execute the scan
         plan = gridplan(exp_time, xstart, xstop, xpoints, ystart, ystop, ypoints, motorx=motorx, motory=motory, md=md,
-                        dets=dets)
+                        dets=dets, snake=snake)
         xrun(smpl, plan)
 
 

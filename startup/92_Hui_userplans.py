@@ -218,7 +218,7 @@ def lineplan(exp_time, xstart, xend, xpoints, motor=None, md=None, dets=None):
 
 
 def gridplan(exp_time, xstart, xstop, xpoints, ystart, ystop, ypoints, motorx=None, motory=None, md=None,
-             dets=None):
+             dets=None, snake=True):
 
     """ plan for 2D grid scan by moving two motors across specified ranges and collecting data using detectors.
 
@@ -237,6 +237,7 @@ def gridplan(exp_time, xstart, xstop, xpoints, ystart, ystop, ypoints, motorx=No
         motory (object, optional): Motor object to move the sample along the y-axis. Default is `sample_y`.
         md (dict, optional): Additional metadata to attach to the scan.
         dets (list, optional): List of extra detectors to record during the scan.
+        snake (bool, optional): Whether to use a snake-like pattern for the grid scan. Default is True.
     """
     if motorx is None:
         motorx = sample_x
@@ -266,7 +267,7 @@ def gridplan(exp_time, xstart, xstop, xpoints, ystart, ystop, ypoints, motorx=No
 
     area_det = xpd_configuration['area_det']
 
-    plan = bp.grid_scan([area_det]+dets, motory, ystart, ystop, ypoints, motorx, xstart, xstop, xpoints, True, md=_md)
+    plan = bp.grid_scan([area_det]+dets, motory, ystart, ystop, ypoints, motorx, xstart, xstop, xpoints, snake, md=_md)
     plan = bpp.subs_wrapper(plan, LiveTable([motorx, motory]+dets))
     plan = bpp.plan_mutator(plan, inner_shutter_control)
     yield from plan
