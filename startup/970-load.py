@@ -107,7 +107,7 @@ if is_re_worker_active():  # running in queueserver
                     ring_current=ring_current,
                     robot=robot)
 
-    RE = MoreCustomizedRunEngine(None)  # This object is like 'xrun', but with the RE API.
+    # RE = MoreCustomizedRunEngine(None)  # This object is like 'xrun', but with the RE API.
     # Manually set re.md to redis.
     RE.md = RedisJSONDict(redis.Redis("info.xpd.nsls2.bnl.gov", 6379), prefix="")
     # RE.msg_hook = ts_msg_hook
@@ -120,26 +120,18 @@ if is_re_worker_active():  # running in queueserver
     from xpdacq.beamtimeSetup import (start_xpdacq, _start_beamtime,
                                       _end_beamtime)
 
-    bt = start_xpdacq()
-    # bt = _start_beamtime("Lin", saf_num="318343", experimenters=["Lin"], wavelength=0.1812)
-    # bt = {'bt_piLast': 'Ghose', 
-    #       'bt_safN': '318343', 
-    #       'bt_experimenters': ["Liu", "Lin"], 
-    #       'bt_wavelength': 0.1812, 
-    #       'bt_uid': 'e70436db', 
-    #       'cycle': '2026-1', 
-    #       'data_session': 'pass-320961'}
+    # bt = start_xpdacq()
 
-    if bt:
-        print(bt)
-        RE.clear_suspenders()
-        RE.beamtime = bt
-    try:
-        print(f"{RE.beamtime = }")
-    except RuntimeError as e:
-        print("=====================\n\n")
-        print(str(e))
-        print("=====================\n\n")
+    # if bt:
+    #     print(bt)
+    #     RE.clear_suspenders()
+    #     RE.beamtime = bt
+    # try:
+    #     print(f"{RE.beamtime = }")
+    # except RuntimeError as e:
+    #     print("=====================\n\n")
+    #     print(str(e))
+    #     print("=====================\n\n")
 
     def ct_1():
         yield from RE.beamtime.scanplans["ct_1"].factory()
