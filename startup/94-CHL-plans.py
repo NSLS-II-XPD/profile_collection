@@ -286,8 +286,8 @@ RE.register_command('inject_xrun_md', _inject_xrun_md)
 
 
 
-from ophyd.sim import det, noisy_det
-def show_msg_command(dets: list=[det], 
+from ophyd.sim import noisy_det
+def show_msg_command(dets: list=[noisy_det], 
                      stream_name: str='primary', 
                      md: dict={},):
     _md = md or {}
