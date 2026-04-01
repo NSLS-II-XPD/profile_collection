@@ -597,6 +597,9 @@ def xray_uvvis_RE(det1: ophyd.Device,
         ## Start to collecting scattering
         yield from _inner_scattering([det1], exposure, frame_acq_time=frame_acq_time, stream_name=stream_name, no_dark=no_dark, **kwargs)
         
+        ## make sure the fast shutter is closed at the end of the run
+        yield from close_shutter_stub()
+        
     # periodic_dark has to wrap a plan which is a complete run (where run_decorator is added).
     grand_plan = periodic_dark(trigger_two_detectors())
     grand_plan = bpp.msg_mutator(grand_plan, _inject_qualified_dark_frame_uid)
