@@ -286,24 +286,24 @@ RE.register_command('inject_xrun_md', _inject_xrun_md)
 
 
 
-from ophyd.sim import noisy_det
-def show_msg_command(dets: list=[noisy_det], 
-                     stream_name: str='primary', 
-                     md: dict={},):
-    _md = md or {}
-    @bpp.stage_decorator(dets)
-    @bpp.run_decorator(md=_md)
-    def trigger_and_wait() -> MsgGenerator:
-        for det in dets:
-            yield from inject_xrun_md()
-            yield from bps.trigger(det, wait=True)
-            yield from bps.create(name=stream_name)
-            yield from bps.read(det)
-            # print(f"\n\n===== {msg.command = } =====\n\n")
+# from ophyd.sim import noisy_det
+# def show_msg_command(dets: list=[noisy_det], 
+#                      stream_name: str='primary', 
+#                      md: dict={},):
+#     _md = md or {}
+#     @bpp.stage_decorator(dets)
+#     @bpp.run_decorator(md=_md)
+#     def trigger_and_wait() -> MsgGenerator:
+#         for det in dets:
+#             yield from inject_xrun_md()
+#             yield from bps.trigger(det, wait=True)
+#             yield from bps.create(name=stream_name)
+#             yield from bps.read(det)
+#             # print(f"\n\n===== {msg.command = } =====\n\n")
     
-    yield from trigger_and_wait()
-    for msg in trigger_and_wait():
-        print(f"\n\n===== {msg.command = } =====\n\n")
+#     yield from trigger_and_wait()
+#     for msg in trigger_and_wait():
+#         print(f"\n\n===== {msg.command = } =====\n\n")
 
 
 def periodic_dark_02(plan):
