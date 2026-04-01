@@ -1,13 +1,15 @@
+from random import sample
+
 from xpdacq.beamtime import configure_area_det
 from xpdacq.xpdacq import periodic_dark
 from xpdacq.xpdacq import _inject_qualified_dark_frame_uid, _inject_calibration_md, _inject_analysis_stage
 import bluesky.preprocessors as bpp
 
 def ct_dark(dets: list, exposure: float):
-    yield from periodic_dark(ct(dets, exposure))
+    return (yield from periodic_dark(ct(dets, exposure)))
     ## needs to add close shutter
     
-    
+
     
 # Issues on 2025/11/10 --> All fixed by CHL and HZ:
 #     To add: 
@@ -16,7 +18,6 @@ def ct_dark(dets: list, exposure: float):
 #           3. Metadata (v)
 #     To check: 
 #           1. configure detector (v)
-
 
 
 
@@ -43,11 +44,15 @@ def _pre_plan(dets, exposure, frame_acq_time=None):
     # setting up area_detector
     # from xpdacq.beamtime import _configure_area_det
     for ad in (d for d in dets if hasattr(d, "cam")):
-        (num_frame, acq_time, computed_exposure) = yield from _configure_area_det(exposure)
+        (num_frame, acq_time, computed_exposure) = yield from configure_area_det(ad, exposure, frame_acq_time)
     # else:
     #     acq_time = 0
     #     computed_exposure = exposure
     #     num_frame = 0
+
+    acq_time = float(acq_time)
+    computed_exposure = float(computed_exposure)
+    num_frame = int(num_frame)
 
     sp = {
         "time_per_frame": acq_time,
@@ -80,6 +85,7 @@ def _pre_plan(dets, exposure, frame_acq_time=None):
     print(_md)
 
     return _md
+
 
 
 
@@ -152,7 +158,12 @@ def trigger_areaDet(dets, exposure, stream_name, md, no_dark, jogging=[], frame_
         
 
 
-from xpdacq.xpdacq import _inject_qualified_dark_frame_uid, _inject_calibration_md, _inject_analysis_stage
+from xpdacq.xpdacq import (_inject_qualified_dark_frame_uid, 
+                           _inject_calibration_md, 
+                           _inject_analysis_stage, 
+                           _validate_dark, 
+                           _auto_load_calibration_file, 
+)
 
 def scan_with_dark(dets: list, 
                    exposure: float=0.1, 
@@ -252,6 +263,47 @@ def scan_with_dark(dets: list,
     return (yield from grand_plan)
 
 
+# Define custom commands for sample loading/unloading.
+
+class xrun_md():
+    def inject_xrun_md(self, *args, **kwargs):
+        """A custom command to inject md into the RunEngine's md."""
+        # This is a placeholder method. The actual implementation will depend on how you want to inject metadata.
+        pass
+
+xx = xrun_md()
+
+from bluesky.utils import single_gen
+def inject_xrun_md():
+    # TODO: I think this can be simpler.
+    return (yield from single_gen(Msg('inject_xrun_md', xx)))
+
+async def _inject_xrun_md(msg):
+    msg.obj.inject_xrun_md(*msg.args, **msg.kwargs)
+
+# Register these custom command with the RunEngine.
+RE.register_command('inject_xrun_md', _inject_xrun_md)
+
+
+
+from ophyd.sim import det, noisy_det
+def show_msg_command(dets: list=[det], 
+                     stream_name: str='primary', 
+                     md: dict={},):
+    _md = md or {}
+    @bpp.stage_decorator(dets)
+    @bpp.run_decorator(md=_md)
+    def trigger_and_wait() -> MsgGenerator:
+        for det in dets:
+            yield from inject_xrun_md()
+            yield from bps.trigger(det, wait=True)
+            yield from bps.create(name=stream_name)
+            yield from bps.read(det)
+            # print(f"\n\n===== {msg.command = } =====\n\n")
+    
+    yield from trigger_and_wait()
+    for msg in trigger_and_wait():
+        print(f"\n\n===== {msg.command = } =====\n\n")
 
 
 def periodic_dark_02(plan):
@@ -387,12 +439,7 @@ def _inner_fluorescence(det2, num_flu):
 		# yield from bps.sleep(2)
 
 	yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
-	
-	try:  
-		yield from stop_group([pump_list[-1]])
-		print(f'\nUV-Vis acquisition finished and stop infusing of {pump_list[-1].name} for toluene dilution\n')
-	except (TypeError):
-		print(f'\n{pump_list = }. No pump_list!! \n')
+
             
 
 
@@ -410,7 +457,7 @@ def _inner_scattering(dets, exposure, frame_acq_time=0.2, stream_name='primary',
         _md["jog_md"] = {"start": jogging[1], "stop": jogging[2], "motor": jogging[0].name}
         jogging_motor = jogging[0]
     else:
-        jogging_motor = OT_stage_2_Y
+        jogging_motor = sample_y   #OT_stage_2_Y for PDF, sample_y for XRD
 
 
     # nonlocal start, stop
@@ -427,7 +474,7 @@ def _inner_scattering(dets, exposure, frame_acq_time=0.2, stream_name='primary',
     # @bpp.stage_decorator(dets)
     # @bpp.run_decorator(md=_md)
     def trigger_and_wait() -> MsgGenerator:
-        yield Msg('inject_xrun_md')
+        yield from inject_xrun_md()
         
         for det in dets:
             
@@ -445,23 +492,25 @@ def _inner_scattering(dets, exposure, frame_acq_time=0.2, stream_name='primary',
             # yield from bps.read(motors[2])
             yield from bps.save()
     
-    if not no_dark:
-        # yield from periodic_dark(trigger_and_wait())
-        grand_plan = periodic_dark_02(trigger_and_wait())
-        grand_plan = bpp.msg_mutator(grand_plan, _inject_qualified_dark_frame_uid_02)
-        grand_plan = bpp.msg_mutator(grand_plan, _inject_calibration_md_02)
-        grand_plan = bpp.msg_mutator(grand_plan, _inject_analysis_stage_02)
-        yield from grand_plan
+    # grand_plan = trigger_and_wait()
     
-    else:
-        yield from open_shutter_stub()
-        grand_plan = bpp.msg_mutator(grand_plan, _inject_qualified_dark_frame_uid_02)
-        grand_plan = bpp.msg_mutator(grand_plan, _inject_calibration_md_02)
-        grand_plan = bpp.msg_mutator(grand_plan, _inject_analysis_stage_02)
-        yield from grand_plan
-        yield from close_shutter_stub()
+    # if not no_dark:
+    #     # yield from periodic_dark(trigger_and_wait())
+    #     grand_plan = periodic_dark_02(trigger_and_wait())
+    #     grand_plan = bpp.msg_mutator(grand_plan, _inject_qualified_dark_frame_uid_02)
+    #     grand_plan = bpp.msg_mutator(grand_plan, _inject_calibration_md_02)
+    #     grand_plan = bpp.msg_mutator(grand_plan, _inject_analysis_stage_02)
+    #     yield from grand_plan
     
-    # yield from trigger_and_wait()
+    # else:
+    #     yield from open_shutter_stub()
+    #     grand_plan = bpp.msg_mutator(grand_plan, _inject_qualified_dark_frame_uid_02)
+    #     grand_plan = bpp.msg_mutator(grand_plan, _inject_calibration_md_02)
+    #     grand_plan = bpp.msg_mutator(grand_plan, _inject_analysis_stage_02)
+    #     yield from grand_plan
+    #     yield from close_shutter_stub()
+    
+    yield from trigger_and_wait()
 
 
 
@@ -479,6 +528,7 @@ def xray_uvvis_RE(det1: ophyd.Device,
                   precursor_list: list=None, 
                   mixer: list=None, 
                   note: dict=None, 
+                  no_dark: bool=False, 
                   **kwargs, 
                   ):
     
@@ -496,7 +546,7 @@ def xray_uvvis_RE(det1: ophyd.Device,
         sample_type (str, optional): sample name
         pump_list (list, optional): list of pumps as ophyd.Device (example: [dds1_p1, dds1_p2, dds2_p1, dds2_p2])
         precursor_list (list, optional): list of precursors name (example: ['CsPbOA', 'TOABr', 'ZnI2', 'Toluene'])
-        mixer (list, optional): list of mixers (example: ['30 cm', '60 cm'])
+        mixer (list, optional): list of mixers (example: ['30 cm', '60 cm'])pump_list
         note (str, optional): addtional info. Defaults to None.
     """
     if (pump_list != None and precursor_list != None):
@@ -533,26 +583,25 @@ def xray_uvvis_RE(det1: ophyd.Device,
 
         ## Start to collecting absrobtion
         # t0 = time.time()
-        yield from _inner_Absorption(det2, num_abs)
+        yield from _inner_Absorption(det2, num_abs, **kwargs)
         
         ## Start to collecting fluorescence
-        yield from _inner_fluorescence(det2, num_flu)
+        yield from _inner_fluorescence(det2, num_flu, **kwargs)
+        
+        try:
+            yield from stop_group([pump_list[-1]])
+            print(f'\nUV-Vis acquisition finished and stop infusing of {pump_list[-1].name} for toluene dilution\n')
+        except TypeError:
+            print(f'\n{pump_list = }. No pump_list!! \n')
 
         ## Start to collecting scattering
-        yield from _inner_scattering([det1], exposure, frame_acq_time=frame_acq_time, stream_name=stream_name)
+        yield from _inner_scattering([det1], exposure, frame_acq_time=frame_acq_time, stream_name=stream_name, no_dark=no_dark, **kwargs)
         
-    ## periodic_dark has to wrap a plan which is a complete run (where run_decorator is added).
-    # grand_plan = periodic_dark(trigger_two_detectors())
-    # grand_plan = bpp.msg_mutator(grand_plan, _inject_qualified_dark_frame_uid)
-    # grand_plan = bpp.msg_mutator(grand_plan, _inject_calibration_md)
-    # grand_plan = bpp.msg_mutator(grand_plan, _inject_analysis_stage)
-    # return (yield from grand_plan)
-    yield from trigger_two_detectors()
-    
-
-
-
-
-
-
+    # periodic_dark has to wrap a plan which is a complete run (where run_decorator is added).
+    grand_plan = periodic_dark(trigger_two_detectors())
+    grand_plan = bpp.msg_mutator(grand_plan, _inject_qualified_dark_frame_uid)
+    grand_plan = bpp.msg_mutator(grand_plan, _inject_calibration_md)
+    grand_plan = bpp.msg_mutator(grand_plan, _inject_analysis_stage)
+    return (yield from grand_plan)
+    # yield from trigger_two_detectors()
     

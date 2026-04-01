@@ -89,6 +89,10 @@ def print_glbl_qserver():
     
     print(f"{glbl['mask_kwargs'] = }")
     
+    print(f"{glbl['inbound_proxy_address'] = }")
+    
+    print(f"{glbl['outbound_proxy_address'] = }")
+    
     yield from bps.sleep(1)
     
 
