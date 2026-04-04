@@ -514,8 +514,8 @@ def _inner_scattering(dets, exposure, frame_acq_time=0.2, stream_name='primary',
 
 
 
-def xray_uvvis_RE(det1: ophyd.Device, 
-                  det2: ophyd.Device, 
+def xray_uvvis_RE(det1, 
+                  det2, 
                   exposure: float, 
                   *args, 
                   frame_acq_time: float=0.2, 
@@ -524,7 +524,7 @@ def xray_uvvis_RE(det1: ophyd.Device,
                   num_flu: int=10, 
                   stream_name: str='scattering', 
                   sample_type: str = 'test', 
-                  pump_list: list=None, 
+                  pump_list = None, 
                   precursor_list: list=None, 
                   mixer: list=None, 
                   note: dict=None, 
@@ -539,6 +539,7 @@ def xray_uvvis_RE(det1: ophyd.Device,
     Args:
         det1 (ophyd.Device): xray detector (example: pe1c)
         det2 (ophyd.Device): Uv-Vis detector (example: qepro)
+        exposure (float): total exposure time for the area detector (det1)
         frame_acq_time (float, optional): frame acquisition time. Defaults to 0.2.
         md (dict, optional): metadata.
         num_abs (int, optional): numbers of absorption spectra
