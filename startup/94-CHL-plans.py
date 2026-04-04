@@ -566,11 +566,11 @@ def xray_uvvis_RE(det1: ophyd.Device,
     sp_md = yield from _pre_plan([det1], exposure, frame_acq_time=frame_acq_time)
 
     if (pump_list == None and precursor_list == None):
-        _md = { #"uvvis" :[det2.integration_time.get(), det2.num_spectra.get(), det2.buff_capacity.get()],
+        _md = { "uvvis" :[det2.integration_time.get(), det2.num_spectra.get(), det2.buff_capacity.get()],
                 "mixer": ['exsitu measurement'],
                 "sample_type": sample_type, 
                 "sample_name": sample_type,
-                #"detectors": [det1.name, det2.name], 
+                "detectors": [det1.name, det2.name], 
                 "note" : note if note else "None"}
         _md.update(md or {})
         
