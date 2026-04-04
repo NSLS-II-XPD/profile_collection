@@ -549,6 +549,10 @@ def xray_uvvis_RE(det1: ophyd.Device,
         mixer (list, optional): list of mixers (example: ['30 cm', '60 cm'])pump_list
         note (str, optional): addtional info. Defaults to None.
     """
+    
+    print(f'\n===== {[det1.name, det2.name, 'xxxxx'] = } =====\n')
+    print(f'\n===== {[pump.name for pump in pump_list] = } =====\n')
+    
     if (pump_list != None and precursor_list != None):
         
         try:
@@ -567,7 +571,7 @@ def xray_uvvis_RE(det1: ophyd.Device,
                "mixer": mixer,
                "sample_type": sample_type,
                "sample_name": sample_type,
-               "detectors": dets, 
+               "detectors_in_use": dets, 
                "note" : note if note else "None"}
         _md.update(md or {})
 
@@ -578,7 +582,7 @@ def xray_uvvis_RE(det1: ophyd.Device,
                 "mixer": ['exsitu measurement'],
                 "sample_type": sample_type, 
                 "sample_name": sample_type,
-                "detectors": dets, 
+                "detectors_in_use": dets, 
                 "note" : note if note else "None"}
         _md.update(md or {})
         
