@@ -95,6 +95,20 @@ def print_glbl_qserver():
     
     yield from bps.sleep(1)
     
+    
+    
+    
+def print_pump_server(pump_list):
+
+    for p in pump_list:
+        print(f"{p.name = }")
+        
+        print(f"{p.read_infuse_rate.get() = }")
+    
+    yield from bps.sleep(1)
+
+
+
 
 def xray_uvvis_plan(det1, det2, *args, md=None, num_abs=10, num_flu=10, sample_type = 'test',
                     pump_list=None, precursor_list=None, mixer=None, note=None, **kwargs):
