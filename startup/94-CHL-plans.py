@@ -550,7 +550,15 @@ def xray_uvvis_RE(det1: ophyd.Device,
         note (str, optional): addtional info. Defaults to None.
     """
     if (pump_list != None and precursor_list != None):
-        _md = {"pumps" : [pump.name for pump in pump_list],
+        
+        try:
+            pumps = [pump.name for pump in pump_list]
+            dets = [det1.name, det2.name]
+        except AttributeError:
+            pumps = [str(pump) for pump in pump_list]
+            dets = [str(det1), str(det2)]
+
+        _md = {"pumps" : pumps,
                "precursors" : precursor_list,
                "infuse_rate" : [pump.read_infuse_rate.get() for pump in pump_list],
                "infuse_rate_unit" : [pump.read_infuse_rate_unit.get() for pump in pump_list],
@@ -559,7 +567,7 @@ def xray_uvvis_RE(det1: ophyd.Device,
                "mixer": mixer,
                "sample_type": sample_type,
                "sample_name": sample_type,
-               "detectors": [det1.name, det2.name], 
+               "detectors": dets, 
                "note" : note if note else "None"}
         _md.update(md or {})
 
@@ -570,7 +578,7 @@ def xray_uvvis_RE(det1: ophyd.Device,
                 "mixer": ['exsitu measurement'],
                 "sample_type": sample_type, 
                 "sample_name": sample_type,
-                "detectors": [det1.name, det2.name], 
+                "detectors": dets, 
                 "note" : note if note else "None"}
         _md.update(md or {})
         
