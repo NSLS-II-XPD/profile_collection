@@ -22,7 +22,8 @@ tiled-client = "==0.2.9"
 # needed until we get ophyd-async packaged
 colorlog = ">=6.9.0,<7"
 xpdan = ">=0.8.2,<0.9"
-xpdacq = ">=1.1.4,<2"
+#xpdacq = ">=1.1.4,<2"
+xpdacq = "==1.0.0"
 databroker = "==2.0.0b68"
 bluesky-tiled-plugins = "==2.0.2"
 lmfit = ">=1.3.4,<2"
@@ -37,7 +38,6 @@ epicscorelibs = ">=7.0.7.99.1.1,<8"
 [feature.profile.pypi-dependencies]
 ophyd-async = { version = ">0.10.0", extras = ["ca", "pva"] }
 
-
 [feature.qs.dependencies]
 bluesky-queueserver = "*"
 bluesky-httpserver = "*"
@@ -50,16 +50,15 @@ bluesky-httpserver = "*"
 qs-backend = "start-re-manager --profile-dir=."
 qs-server = "uvicorn --host localhost --port 60610 bluesky_httpserver.server:app"
 
-
 [feature.terminal.dependencies]
 ipython = ">=9.5.0"
 pyside6 = "*"
 numpy = ">2"
 
-
 [feature.terminal.tasks]
-start = "unset SESSION_MANAGER && MPLBACKEND=qtagg ipython --profile-dir=."
+start = "unset SESSION_MANAGER && MPLBACKEND=qtagg ipython --profile-dir=$HOME/.ipython/profile_$BS_PROFILE"
 pvs = "ipython --profile-dir=. -c 'get_pv_types(); exit()'"
+git-install-bluesky = "pip install -v git+https://github.com/bluesky/bluesky.git"
 
 [environments]
 terminal = {features=["profile", "terminal"], solve-group="profile"}
