@@ -63,3 +63,6 @@ git-install-bluesky = "pip install -v git+https://github.com/bluesky/bluesky.git
 [environments]
 terminal = {features=["profile", "terminal"], solve-group="profile"}
 qs = {features=["profile", "qs"], solve-group="profile"}
+
+[dependencies]
+setuptools = "==81.0.0"
