@@ -8,15 +8,17 @@ def ion_chamber_out(y=-10):
     #ecal_x.move(x)
     ecal_y.move(y)
 
-def takeone(sample, exp_time, num=1, delay_num=0, dets=[] ):
+def takeone(sample, exp_time, num=1, delay_num=0, dets=None ):
     """ take one data, collect both det and ion_chamber data
 
     parameter:
     sample (int): sample name(index) in sample list
-    dets (list): list of detectors, default: [ion_chamber]
+    dets (list): list of detectors, default: []
     exp_time (float): exposure time in seconds
 
     """
+    if dets is None:
+        dets = []
     area_det = xpd_configuration['area_det']
     dets=[area_det] + dets
     delay_num = delay_num + exp_time
@@ -60,7 +62,22 @@ def plan_with_calib(dets, exp_time, num, calib_file, md=None):
     plan = count_with_calib(dets, num, calibration_md=calib_file, md=_md)
     plan = bpp.subs_wrapper(plan, LiveTable(motors))
     yield from plan
+    
+def load_calibration_md2(poni_file: str) -> dict:
+    """Load the calibration metadata in a dictionary from a .poni file.
 
+    Parameters
+    ----------
+    poni_file :
+        The path to the .poni file.
+
+    Returns
+    -------
+    calibration_md :
+        The metadata in a dictionary.
+    """
+    ai = pyFAI.load(poni_file)
+    return dict(ai.get_config())
 
 def count_with_calib(detectors: list, num: int = 1, delay: float = None, *, calibration_md: dict = None,
                      md: dict = None):
@@ -201,7 +218,7 @@ def lineplan(exp_time, xstart, xend, xpoints, motor=None, md=None, dets=None):
 
 
 def gridplan(exp_time, xstart, xstop, xpoints, ystart, ystop, ypoints, motorx=None, motory=None, md=None,
-             dets=None):
+             dets=None, snake=True):
 
     """ plan for 2D grid scan by moving two motors across specified ranges and collecting data using detectors.
 
@@ -220,6 +237,7 @@ def gridplan(exp_time, xstart, xstop, xpoints, ystart, ystop, ypoints, motorx=No
         motory (object, optional): Motor object to move the sample along the y-axis. Default is `sample_y`.
         md (dict, optional): Additional metadata to attach to the scan.
         dets (list, optional): List of extra detectors to record during the scan.
+        snake (bool, optional): Whether to use a snake-like pattern for the grid scan. Default is True.
     """
     if motorx is None:
         motorx = sample_x
@@ -249,7 +267,7 @@ def gridplan(exp_time, xstart, xstop, xpoints, ystart, ystop, ypoints, motorx=No
 
     area_det = xpd_configuration['area_det']
 
-    plan = bp.grid_scan([area_det]+dets, motory, ystart, ystop, ypoints, motorx, xstart, xstop, xpoints, True, md=_md)
+    plan = bp.grid_scan([area_det]+dets, motory, ystart, ystop, ypoints, motorx, xstart, xstop, xpoints, snake, md=_md)
     plan = bpp.subs_wrapper(plan, LiveTable([motorx, motory]+dets))
     plan = bpp.plan_mutator(plan, inner_shutter_control)
     yield from plan
@@ -309,7 +327,7 @@ def xyposplan(exp_time, posxlist, posylist, motorx=None, motory=None, md=None, d
     plan = bpp.plan_mutator(plan, inner_shutter_control)
     yield from plan
 
-def take_one_dark(sample, exp_time, dets=[]):
+def take_one_dark(sample, exp_time, dets=None):
     """ take one data with dark image, then set dark window to 1000 minutes
 
     parameter:
@@ -318,6 +336,8 @@ def take_one_dark(sample, exp_time, dets=[]):
     exp_time (float): exposure time in seconds
 
     """
+    if dets is None:
+        dets = []
     area_det = xpd_configuration['area_det']
     dets=[area_det] + dets
     glbl['dk_window'] = 0.1
