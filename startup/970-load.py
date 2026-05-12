@@ -166,15 +166,6 @@ if is_re_worker_active():  # running in queueserver
     from nslsii import configure_kafka_publisher
     from bluesky.utils import ts_msg_hook
 
-    from xpdacq.beamtimeSetup import start_xpdacq
-    from xpdacq.xpdacq_conf import configure_device
-    
-    configure_device(area_det=pe1c, shutter=shctl1,
-                    temp_controller=cs700, db='xpd',
-                    filter_bank=fb,
-                    ring_current=ring_current,
-                    robot=robot)
-
     # RE = MoreCustomizedRunEngine(None)  # This object is like 'xrun', but with the RE API.
     # Manually set re.md to redis.
     RE.md = RedisJSONDict(redis.Redis("info.xpd.nsls2.bnl.gov", 6379), prefix="")
@@ -185,9 +176,6 @@ if is_re_worker_active():  # running in queueserver
     # insert header to db, either simulated or real
     RE.subscribe(tiled_inserter.insert, "all")
     
-    from xpdacq.beamtimeSetup import (start_xpdacq, _start_beamtime,
-                                      _end_beamtime)
-
     # bt = start_xpdacq()
 
     # if bt:
