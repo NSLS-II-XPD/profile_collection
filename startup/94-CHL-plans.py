@@ -104,7 +104,7 @@ def trigger_areaDet(dets: Sequence[Readable], exposure, stream_name, md, no_dark
         _md["jog_md"] = {"start": jogging[1], "stop": jogging[2], "motor": jogging[0].name}
         jogging_motor = jogging[0]
     else:
-        jogging_motor = OT_stage_2_Y
+        jogging_motor = sample_y 
 
     # if 'pilatus' in dets[0].name:
     #     motors = [Grid_X, Grid_Y, Grid_Z]
