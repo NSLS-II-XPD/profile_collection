@@ -43,10 +43,12 @@ import httpx
 from nslsii.sync_experiment import sync_experiment
 from pprint import pformat
 
+# TODO: Remove this once the fix is merged upstream
+os.environ["REDIS_HOST"] = "xf28id2-xpd-redis1.nsls2.bnl.gov"
 
 def pass_start_beamtime(proposal_num, saf_num, wavelength, experimenters=[], test=False, commissioning=False):
 
-    sync_experiment(proposal_num, "XPD")
+    sync_experiment(proposal_num, "xpd", redis_ssl=True)
 
     # Copied from NSLS2/start-experiment:
     nslsii_api_client = httpx.Client(base_url="https://api.nsls2.bnl.gov")
