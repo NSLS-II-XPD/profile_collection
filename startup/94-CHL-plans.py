@@ -1,9 +1,11 @@
 from random import sample
+from collections.abc import Sequence
 
 from xpdacq.beamtime import configure_area_det
 from xpdacq.xpdacq import periodic_dark
 from xpdacq.xpdacq import _inject_qualified_dark_frame_uid, _inject_calibration_md, _inject_analysis_stage
 import bluesky.preprocessors as bpp
+from bluesky.protocols import Readable
 
 def ct_dark(dets: list, exposure: float):
     return (yield from periodic_dark(ct(dets, exposure)))
@@ -22,7 +24,7 @@ def ct_dark(dets: list, exposure: float):
 
 
 ## A pre-plan to configure the area detector
-def _pre_plan(dets, exposure, frame_acq_time=None):
+def _pre_plan(dets: Sequnce[Readable], exposure, frame_acq_time=None):
     """Handle detector exposure time + xpdan required metadata"""
 
     try:
@@ -89,7 +91,7 @@ def _pre_plan(dets, exposure, frame_acq_time=None):
 
 
 
-def trigger_areaDet(dets, exposure, stream_name, md, no_dark, jogging=[], frame_acq_time=None, user_config={}):
+def trigger_areaDet(dets: Sequence[Readable], exposure, stream_name, md, no_dark, jogging=[], frame_acq_time=None, user_config={}):
     _md = md or {}
     # _md['sample_name'] = sample_name
     sp_md = yield from _pre_plan(dets, exposure, frame_acq_time=frame_acq_time)
@@ -165,7 +167,8 @@ from xpdacq.xpdacq import (_inject_qualified_dark_frame_uid,
                            _auto_load_calibration_file, 
 )
 
-def scan_with_dark(dets: list, 
+
+def scan_with_dark(dets: Sequence[Readable], 
                    exposure: float=0.1, 
                    sample_ID: int=0, 
                    sample_info: dict={}, 
