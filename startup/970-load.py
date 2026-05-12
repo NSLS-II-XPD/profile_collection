@@ -100,20 +100,21 @@ if is_re_worker_active():  # running in queueserver
 
     # insert header to db, either simulated or real
     RE.subscribe(tiled_inserter.insert, "all")
-    
-    bt = {}
-    # bt = start_xpdacq()
 
-    # if bt:
-    #     print(bt)
-    #     RE.clear_suspenders()
-    #     RE.beamtime = bt
-    # try:
-    #     print(f"{RE.beamtime = }")
-    # except RuntimeError as e:
-    #     print("=====================\n\n")
-    #     print(str(e))
-    #     print("=====================\n\n")
+    from xpdacq.beamtimeSetup import start_xpdacq
+    
+    bt = start_xpdacq()
+
+    if bt:
+        print(bt)
+        RE.clear_suspenders()
+        RE.beamtime = bt
+    try:
+        print(f"{RE.beamtime = }")
+    except RuntimeError as e:
+        print("=====================\n\n")
+        print(str(e))
+        print("=====================\n\n")
 
     def ct_1():
         yield from RE.beamtime.scanplans["ct_1"].factory()
