@@ -24,7 +24,7 @@ def ct_dark(dets: list, exposure: float):
 
 
 ## A pre-plan to configure the area detector
-def _pre_plan(dets: Sequnce[Readable], exposure, frame_acq_time=None):
+def _pre_plan(dets: Sequence[Readable], exposure, frame_acq_time=None):
     """Handle detector exposure time + xpdan required metadata"""
 
     try:
