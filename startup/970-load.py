@@ -101,6 +101,7 @@ if is_re_worker_active():  # running in queueserver
     # insert header to db, either simulated or real
     RE.subscribe(tiled_inserter.insert, "all")
     
+    bt = {}
     # bt = start_xpdacq()
 
     # if bt:
