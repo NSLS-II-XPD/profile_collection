@@ -154,9 +154,11 @@ def trigger_areaDet(dets: Sequence[Readable], exposure, stream_name, md, no_dark
     if not no_dark:
         yield from periodic_dark(trigger_and_wait())
     else:
-        yield from open_shutter_stub()
+        # yield from open_shutter_stub()
+        yield from bps.mv(fs, -20)
         yield from trigger_and_wait()
-        yield from close_shutter_stub()
+        # yield from close_shutter_stub()
+        yield from bps.mv(fs, 20)
         
 
 
@@ -340,7 +342,8 @@ def periodic_dark_02(plan):
                     take_dark(),
                     bps.stage(area_det),
                     bpp.single_gen(msg),
-                    open_shutter_stub(),
+                    bps.mv(fs, -20),
+                    # open_shutter_stub(),
                 ),
                 None,
             )
@@ -348,7 +351,8 @@ def periodic_dark_02(plan):
             return (
                 bpp.pchain(
                     bpp.single_gen(msg),
-                    open_shutter_stub()
+                    bps.mv(fs, -20),
+                    # open_shutter_stub()
                 ),
                 None,
             )
@@ -481,6 +485,7 @@ def _inner_scattering(dets, exposure, frame_acq_time=0.2, stream_name='primary',
         
         for det in dets:
             
+            yield from bps.mv(fs, -20)
             nonlocal jogging
             if len(jogging) == 3:
                 print(f'Star to jog using {jogging[0].name} from {jogging[1]} mm to {jogging[2]} mm')
@@ -494,6 +499,7 @@ def _inner_scattering(dets, exposure, frame_acq_time=0.2, stream_name='primary',
             # yield from bps.read(motors[1])
             # yield from bps.read(motors[2])
             yield from bps.save()
+            yield from bps.mv(fs, 20)
     
     # grand_plan = trigger_and_wait()
     
@@ -614,10 +620,12 @@ def xray_uvvis_RE(det1,
         yield from _inner_scattering([det1], exposure, frame_acq_time=frame_acq_time, stream_name=stream_name, no_dark=no_dark, **kwargs)
         
         ## make sure the fast shutter is closed at the end of the run
-        yield from close_shutter_stub()
+        # yield from close_shutter_stub()
+        # yield from bps.mv(fs, 20)
+        
         
     # periodic_dark has to wrap a plan which is a complete run (where run_decorator is added).
-    grand_plan = periodic_dark(trigger_two_detectors())
+    grand_plan = periodic_dark_02(trigger_two_detectors())
     grand_plan = bpp.msg_mutator(grand_plan, _inject_qualified_dark_frame_uid)
     grand_plan = bpp.msg_mutator(grand_plan, _inject_calibration_md)
     grand_plan = bpp.msg_mutator(grand_plan, _inject_analysis_stage)
