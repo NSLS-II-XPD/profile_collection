@@ -93,6 +93,12 @@ def print_glbl_qserver():
     
     print(f"{glbl['outbound_proxy_address'] = }")
     
+    try:
+        print(f'{xpd_configuration = }')
+        
+    except (NameError, KeyError):
+        pass
+    
     yield from bps.sleep(1)
     
     
