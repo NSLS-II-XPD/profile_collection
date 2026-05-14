@@ -130,6 +130,7 @@ def halide_acquire(suggestions: list[dict], actuators, sensors=None, md=None):
         "dof_names": dof_names,
         "precursors": PRECURSOR_LIST[: len(pump_list)],
         "pumps": [p.name for p in pump_list],
+        "pump_status": [p.status.get() for p in pump_list],
         "detectors": ["qepro"],
     }
     _md.update(md or {})
