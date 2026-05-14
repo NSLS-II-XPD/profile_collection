@@ -78,6 +78,13 @@ if is_re_worker_active():  # running in queueserver
     from xpdacq.xpdacq_conf import (glbl_dict, configure_device,
                                     _reload_glbl, _set_glbl,
                                     _load_beamline_config)
+    
+    configure_device(area_det=pe1c, shutter=shctl1,
+                    temp_controller=cs700, db='xpd',
+                    filter_bank=fb,
+                    ring_current=ring_current,
+                    robot=robot)
+        
     reload_glbl_dict = _reload_glbl()
     from xpdacq.glbl import glbl
     beamline_config = _load_beamline_config(glbl['blconfig_path'], test=True)
