@@ -70,7 +70,7 @@ POST_DILUTE_WAIT_SEC = 30  # wait time after starting toluene pump (seconds)
 DOF_TO_PUMP = {
     "infusion_rate_CsPb": "dds2_p1",
     "infusion_rate_Br": "dds2_p2",
-    "infusion_rate_I2": "dds1_p1",
+    "infusion_rate_I2": "dds3_p1",
     "infusion_rate_Cl": "dds1_p1",
     "infusion_rate_OAm": "dds1_p2",
 }
