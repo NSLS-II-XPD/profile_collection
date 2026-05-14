@@ -7,6 +7,28 @@ from xpdacq.xpdacq import _inject_qualified_dark_frame_uid, _inject_calibration_
 import bluesky.preprocessors as bpp
 from bluesky.protocols import Readable
 
+def open_shutter_stub():
+    """simple function to return a generator that yields messages to
+    open the shutter"""
+    # yield from bps.abs_set(
+    #     xpd_configuration["shutter"], XPD_SHUTTER_CONF["open"], wait=True
+    # )
+    yield from bps.mv(fs, -20)
+    yield from bps.sleep(glbl["shutter_sleep"])
+    yield from bps.checkpoint()
+    
+    
+def close_shutter_stub():
+    """simple function to return a generator that yields messages to
+    close the shutter"""
+    # yield from bps.abs_set(
+    #     xpd_configuration["shutter"], XPD_SHUTTER_CONF["close"], wait=True
+    # )
+    yield from bps.mv(fs, 20)
+    yield from bps.checkpoint()
+    
+
+
 def ct_dark(dets: list, exposure: float):
     return (yield from periodic_dark(ct(dets, exposure)))
     ## needs to add close shutter
@@ -152,7 +174,7 @@ def trigger_areaDet(dets: Sequence[Readable], exposure, stream_name, md, no_dark
             yield from bps.save()
     
     if not no_dark:
-        yield from periodic_dark_02(trigger_and_wait())
+        yield from periodic_dark(trigger_and_wait())
         yield from bps.mv(fs, 20)
         
     else:
@@ -635,25 +657,5 @@ def xray_uvvis_RE(det1,
     # yield from trigger_two_detectors()
     
 
-
-def open_shutter_stub():
-    """simple function to return a generator that yields messages to
-    open the shutter"""
-    # yield from bps.abs_set(
-    #     xpd_configuration["shutter"], XPD_SHUTTER_CONF["open"], wait=True
-    # )
-    yield from bps.mv(fs, -20)
-    yield from bps.sleep(glbl["shutter_sleep"])
-    yield from bps.checkpoint()
-    
-    
-def close_shutter_stub():
-    """simple function to return a generator that yields messages to
-    close the shutter"""
-    # yield from bps.abs_set(
-    #     xpd_configuration["shutter"], XPD_SHUTTER_CONF["close"], wait=True
-    # )
-    yield from bps.mv(fs, 20)
-    yield from bps.checkpoint()
     
     

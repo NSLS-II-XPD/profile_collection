@@ -5,9 +5,32 @@ import bluesky.preprocessors as bpp
 
 from bluesky.callbacks import LiveTable, LivePlot
 from xpdacq.beamtime import (_configure_area_det, shutter_step,
-                             open_shutter_stub, close_shutter_stub,
+                            #  open_shutter_stub, close_shutter_stub,
                              _nstep)
 from xpdacq.xpdacq_conf import xpd_configuration
+
+
+def open_shutter_stub():
+    """simple function to return a generator that yields messages to
+    open the shutter"""
+    # yield from bps.abs_set(
+    #     xpd_configuration["shutter"], XPD_SHUTTER_CONF["open"], wait=True
+    # )
+    yield from bps.mv(fs, -20)
+    yield from bps.sleep(glbl["shutter_sleep"])
+    yield from bps.checkpoint()
+    
+    
+def close_shutter_stub():
+    """simple function to return a generator that yields messages to
+    close the shutter"""
+    # yield from bps.abs_set(
+    #     xpd_configuration["shutter"], XPD_SHUTTER_CONF["close"], wait=True
+    # )
+    yield from bps.mv(fs, 20)
+    yield from bps.checkpoint()
+
+
 
 ####  Plan to run Gas/RGA2 over xpdacq protocols of samples ########
 
