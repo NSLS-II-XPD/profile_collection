@@ -152,7 +152,9 @@ def trigger_areaDet(dets: Sequence[Readable], exposure, stream_name, md, no_dark
             yield from bps.save()
     
     if not no_dark:
-        yield from periodic_dark(trigger_and_wait())
+        yield from periodic_dark_02(trigger_and_wait())
+        yield from bps.mv(fs, 20)
+        
     else:
         # yield from open_shutter_stub()
         yield from bps.mv(fs, -20)
@@ -342,7 +344,7 @@ def periodic_dark_02(plan):
                     take_dark(),
                     bps.stage(area_det),
                     bpp.single_gen(msg),
-                    bps.mv(fs, -20),
+                    # bps.mv(fs, -20),
                     # open_shutter_stub(),
                 ),
                 None,
@@ -351,7 +353,7 @@ def periodic_dark_02(plan):
             return (
                 bpp.pchain(
                     bpp.single_gen(msg),
-                    bps.mv(fs, -20),
+                    # bps.mv(fs, -20),
                     # open_shutter_stub()
                 ),
                 None,
