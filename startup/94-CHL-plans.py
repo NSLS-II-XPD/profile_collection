@@ -627,10 +627,33 @@ def xray_uvvis_RE(det1,
         
         
     # periodic_dark has to wrap a plan which is a complete run (where run_decorator is added).
-    grand_plan = periodic_dark_02(trigger_two_detectors())
+    grand_plan = periodic_dark(trigger_two_detectors())
     grand_plan = bpp.msg_mutator(grand_plan, _inject_qualified_dark_frame_uid)
     grand_plan = bpp.msg_mutator(grand_plan, _inject_calibration_md)
     grand_plan = bpp.msg_mutator(grand_plan, _inject_analysis_stage)
     return (yield from grand_plan)
     # yield from trigger_two_detectors()
+    
+
+
+def open_shutter_stub():
+    """simple function to return a generator that yields messages to
+    open the shutter"""
+    # yield from bps.abs_set(
+    #     xpd_configuration["shutter"], XPD_SHUTTER_CONF["open"], wait=True
+    # )
+    yield from bps.mv(fs, -20)
+    yield from bps.sleep(glbl["shutter_sleep"])
+    yield from bps.checkpoint()
+    
+    
+def close_shutter_stub():
+    """simple function to return a generator that yields messages to
+    close the shutter"""
+    # yield from bps.abs_set(
+    #     xpd_configuration["shutter"], XPD_SHUTTER_CONF["close"], wait=True
+    # )
+    yield from bps.mv(fs, 20)
+    yield from bps.checkpoint()
+    
     
