@@ -10,109 +10,6 @@ import bluesky.preprocessors as bpp
 
 # RE.msg_hook = ts_msg_hook
 
-
-def open_shutter_stub():
-    """simple function to return a generator that yields messages to
-    open the shutter"""
-    # yield from bps.abs_set(
-    #     xpd_configuration["shutter"], XPD_SHUTTER_CONF["open"], wait=True
-    # )
-    yield from bps.mv(fs, -20)
-    yield from bps.sleep(glbl["shutter_sleep"])
-    yield from bps.checkpoint()
-    
-    
-def close_shutter_stub():
-    """simple function to return a generator that yields messages to
-    close the shutter"""
-    # yield from bps.abs_set(
-    #     xpd_configuration["shutter"], XPD_SHUTTER_CONF["close"], wait=True
-    # )
-    yield from bps.mv(fs, 20)
-    yield from bps.checkpoint()
-    
-    
-    
-def take_dark():
-    """a plan for taking a single dark frame"""
-    print("INFO: closing shutter...")
-    yield from close_shutter_stub()
-    print("INFO: taking dark frame....")
-    # upto this stage, area_det has been configured to so exposure time is
-    # correct
-    area_det = xpd_configuration["area_det"]
-    acq_time = area_det.cam.acquire_time.get()
-    if hasattr(area_det, 'images_per_set'):
-        num_frame = area_det.images_per_set.get()
-    else:
-        num_frame = 1
-    computed_exposure = acq_time * num_frame
-    # update md
-    _md = {
-        "sp_time_per_frame": acq_time,
-        "sp_num_frames": num_frame,
-        "sp_computed_exposure": computed_exposure,
-        "sp_type": "ct",
-        "sp_plan_name": "dark_{}".format(computed_exposure),
-        "dark_frame": True,
-    }
-    c = bp.count([area_det], md=_md)
-    yield from bpp.subs_wrapper(c, {"stop": [_update_dark_dict_list]})
-    print("opening shutter...")
-
-
-
-def periodic_dark(plan):
-    """
-    a plan wrapper that takes a plan and inserts `take_dark`
-
-    The `take_dark` plan is inserted on the fly before the beginning of
-    any new run after a period of time defined by glbl['dk_window'] has passed.
-    """
-    need_dark = True
-
-    def insert_take_dark(msg):
-        nonlocal need_dark
-        qualified_dark_uid = _validate_dark(expire_time=glbl["dk_window"])
-        area_det = xpd_configuration["area_det"]
-
-        if (not need_dark) and (not qualified_dark_uid):
-            need_dark = True
-        if need_dark and (not qualified_dark_uid) and msg.command == "open_run" and (
-            "dark_frame" not in msg.kwargs
-        ):
-            # We are about to start a new 'run' (e.g., a count or a scan).
-            # Insert a dark frame run first.
-            need_dark = False
-            # Annoying detail: the detector was probably already staged.
-            # Unstage it (if it wasn't staged, nothing will happen) and
-            # then take_dark() and then re-stage it.
-            return (
-                bpp.pchain(
-                    bps.unstage(area_det),
-                    take_dark(),
-                    bps.stage(area_det),
-                    bpp.single_gen(msg),
-                    open_shutter_stub(),
-                ),
-                None,
-            )
-        elif msg.command == "open_run" and "dark_frame" not in msg.kwargs:
-            return (
-                bpp.pchain(
-                    bpp.single_gen(msg),
-                    open_shutter_stub()
-                ),
-                None,
-            )
-        else:
-            # do nothing if (not need_dark)
-            return None, None
-
-    return (yield from bpp.plan_mutator(plan, insert_take_dark))
-
-
-
 ## dump or read glbl["_dark_dict_list"] into or from a json file
 def dark_json(json_fn, dump_or_load='dump'):
     if dump_or_load == 'dump':
@@ -162,6 +59,8 @@ def set_glbl_qserver(frame_acq_time=0.5, dk_window=1000, auto_load_calib=True, s
     print(f"{glbl['_dark_dict_list'] = }")
     
     print(f"{glbl['mask_kwargs'] = }")
+    
+    print(xpd_configuration)
     
     yield from bps.sleep(1)
     

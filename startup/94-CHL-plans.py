@@ -1,7 +1,8 @@
 from random import sample
 from collections.abc import Sequence
 
-from xpdacq.beamtime import configure_area_det
+from xpdacq.beamtime import configure_area_det, open_shutter_stub, close_shutter_stub
+from xpdacq.xpdacq import periodic_dark
 from xpdacq.xpdacq import _inject_qualified_dark_frame_uid, _inject_calibration_md, _inject_analysis_stage
 import bluesky.preprocessors as bpp
 from bluesky.protocols import Readable
