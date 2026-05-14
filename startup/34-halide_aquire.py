@@ -84,7 +84,7 @@ DILUTE_PUMP_NAME = "dds1_p2"
 # ---------------------------------------------------------------------------
 
 
-def halide_acquire(suggestions, actuators, sensors=None, md=None):
+def halide_acquire(suggestions: list[dict], actuators, sensors=None, md=None):
     """Acquire UV-Vis data for halide perovskite optimization.
 
     Mirrors the plan sequence that synthesis_queue_xlsx previously submitted
