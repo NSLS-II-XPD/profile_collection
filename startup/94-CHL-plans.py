@@ -2,31 +2,9 @@ from random import sample
 from collections.abc import Sequence
 
 from xpdacq.beamtime import configure_area_det
-from xpdacq.xpdacq import periodic_dark
 from xpdacq.xpdacq import _inject_qualified_dark_frame_uid, _inject_calibration_md, _inject_analysis_stage
 import bluesky.preprocessors as bpp
 from bluesky.protocols import Readable
-
-def open_shutter_stub():
-    """simple function to return a generator that yields messages to
-    open the shutter"""
-    # yield from bps.abs_set(
-    #     xpd_configuration["shutter"], XPD_SHUTTER_CONF["open"], wait=True
-    # )
-    yield from bps.mv(fs, -20)
-    yield from bps.sleep(glbl["shutter_sleep"])
-    yield from bps.checkpoint()
-    
-    
-def close_shutter_stub():
-    """simple function to return a generator that yields messages to
-    close the shutter"""
-    # yield from bps.abs_set(
-    #     xpd_configuration["shutter"], XPD_SHUTTER_CONF["close"], wait=True
-    # )
-    yield from bps.mv(fs, 20)
-    yield from bps.checkpoint()
-    
 
 
 def ct_dark(dets: list, exposure: float):
@@ -333,58 +311,6 @@ RE.register_command('inject_xrun_md', _inject_xrun_md)
 #     yield from trigger_and_wait()
 #     for msg in trigger_and_wait():
 #         print(f"\n\n===== {msg.command = } =====\n\n")
-
-
-def periodic_dark_02(plan):
-    """
-    a plan wrapper that takes a plan and inserts `take_dark`
-
-    The `take_dark` plan is inserted on the fly before the beginning of
-    any new run after a period of time defined by glbl['dk_window'] has passed.
-    """
-    need_dark = True
-
-    def insert_take_dark(msg):
-        nonlocal need_dark
-        qualified_dark_uid = _validate_dark(expire_time=glbl["dk_window"])
-        area_det = xpd_configuration["area_det"]
-
-        if (not need_dark) and (not qualified_dark_uid):
-            need_dark = True
-        if need_dark and (not qualified_dark_uid) and msg.command == "inject_xrun_md" and (
-            "dark_frame" not in msg.kwargs
-        ):
-            # We are about to start a new 'run' (e.g., a count or a scan).
-            # Insert a dark frame run first.
-            need_dark = False
-            # Annoying detail: the detector was probably already staged.
-            # Unstage it (if it wasn't staged, nothing will happen) and
-            # then take_dark() and then re-stage it.
-            return (
-                bpp.pchain(
-                    bps.unstage(area_det),
-                    take_dark(),
-                    bps.stage(area_det),
-                    bpp.single_gen(msg),
-                    # bps.mv(fs, -20),
-                    # open_shutter_stub(),
-                ),
-                None,
-            )
-        elif msg.command == "inject_xrun_md" and "dark_frame" not in msg.kwargs:
-            return (
-                bpp.pchain(
-                    bpp.single_gen(msg),
-                    # bps.mv(fs, -20),
-                    # open_shutter_stub()
-                ),
-                None,
-            )
-        else:
-            # do nothing if (not need_dark)
-            return None, None
-
-    return (yield from bpp.plan_mutator(plan, insert_take_dark))
 
 
 
