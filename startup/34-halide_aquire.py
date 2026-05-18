@@ -84,7 +84,28 @@ DILUTE_PUMP_NAME = "dds1_p2"
 # ---------------------------------------------------------------------------
 
 
-def halide_acquire(suggestions: list[dict], actuators, sensors=None, md=None):
+def halide_acquire(
+    suggestions: list[dict],
+    actuators,
+    sensors=None,
+    md=None,
+    *,
+    syringe_list=None,
+    syringe_mater_list=None,
+    target_vol_list=None,
+    set_target_list=None,
+    rate_unit=None,
+    mixer_lengths_cm=None,
+    resident_t_ratio=None,
+    num_abs=None,
+    num_flu=None,
+    precursor_list=None,
+    post_dilute=None,
+    post_dilute_ratio=None,
+    post_dilute_wait_sec=None,
+    dof_to_pump=None,
+    dilute_pump_name=None,
+):
     """Acquire UV-Vis data for halide perovskite optimization.
 
     Mirrors the plan sequence that synthesis_queue_xlsx previously submitted
@@ -101,6 +122,36 @@ def halide_acquire(suggestions: list[dict], actuators, sensors=None, md=None):
         Sensor device names (e.g., ["QEPro"]).
     md : dict | None
         Metadata dict (contains blop_correlation_uid for tracking).
+    syringe_list : list[float] | None
+        Syringe sizes in mL for each pump, in DOF order.
+    syringe_mater_list : list[str] | None
+        Syringe materials for each pump.
+    target_vol_list : list[str] | None
+        Target volumes (e.g. ``["30 ml", ...]``) for each pump.
+    set_target_list : list[bool] | None
+        Whether to auto-set the target volume for each pump.
+    rate_unit : str | None
+        Flow-rate unit string passed to ``set_group_infuse2``.
+    mixer_lengths_cm : list[float] | None
+        Lengths of mixer tubing segments in cm.
+    resident_t_ratio : float | None
+        Multiplier of the residence time to wait for equilibrium.
+    num_abs : int | None
+        Number of absorbance spectra to collect.
+    num_flu : int | None
+        Number of fluorescence spectra to collect.
+    precursor_list : list[str] | None
+        Precursor names stored in run metadata.
+    post_dilute : bool | None
+        Whether to perform toluene post-dilution.
+    post_dilute_ratio : float | None
+        Toluene rate = sum(active_rates) * ratio.
+    post_dilute_wait_sec : float | None
+        Seconds to wait after starting the toluene pump.
+    dof_to_pump : dict[str, str] | None
+        Mapping of DOF name → pump device name in the queueserver namespace.
+    dilute_pump_name : str | None
+        Device name of the toluene dilution pump.
 
     Yields
     ------
@@ -112,6 +163,41 @@ def halide_acquire(suggestions: list[dict], actuators, sensors=None, md=None):
     str
         The UID of the Bluesky run.
     """
+    # Resolve all configuration, falling back to module-level defaults
+    syringe_list = syringe_list if syringe_list is not None else SYRINGE_LIST
+    syringe_mater_list = (
+        syringe_mater_list if syringe_mater_list is not None else SYRINGE_MATER_LIST
+    )
+    target_vol_list = (
+        target_vol_list if target_vol_list is not None else TARGET_VOL_LIST
+    )
+    set_target_list = (
+        set_target_list if set_target_list is not None else SET_TARGET_LIST
+    )
+    rate_unit = rate_unit if rate_unit is not None else RATE_UNIT
+    mixer_lengths_cm = (
+        mixer_lengths_cm if mixer_lengths_cm is not None else MIXER_LENGTHS_CM
+    )
+    resident_t_ratio = (
+        resident_t_ratio if resident_t_ratio is not None else RESIDENT_T_RATIO
+    )
+    num_abs = num_abs if num_abs is not None else NUM_ABS
+    num_flu = num_flu if num_flu is not None else NUM_FLU
+    precursor_list = precursor_list if precursor_list is not None else PRECURSOR_LIST
+    post_dilute = post_dilute if post_dilute is not None else POST_DILUTE
+    post_dilute_ratio = (
+        post_dilute_ratio if post_dilute_ratio is not None else POST_DILUTE_RATIO
+    )
+    post_dilute_wait_sec = (
+        post_dilute_wait_sec
+        if post_dilute_wait_sec is not None
+        else POST_DILUTE_WAIT_SEC
+    )
+    dof_to_pump = dof_to_pump if dof_to_pump is not None else DOF_TO_PUMP
+    dilute_pump_name = (
+        dilute_pump_name if dilute_pump_name is not None else DILUTE_PUMP_NAME
+    )
+
     suggestion = suggestions[0]
 
     # Extract rates from suggestion — DOF names like "infusion_rate_CsPb"
@@ -119,7 +205,7 @@ def halide_acquire(suggestions: list[dict], actuators, sensors=None, md=None):
     rate_list = [float(suggestion[name]) for name in dof_names]
 
     # Resolve pump devices
-    pump_list = _resolve_pumps_from_dofs(dof_names)
+    pump_list = _resolve_pumps_from_dofs(dof_names, dof_to_pump)
 
     sample_type = _make_sample_name(rate_list)
 
@@ -128,7 +214,7 @@ def halide_acquire(suggestions: list[dict], actuators, sensors=None, md=None):
         "sample_type": sample_type,
         "infuse_rates": rate_list,
         "dof_names": dof_names,
-        "precursors": PRECURSOR_LIST[: len(pump_list)],
+        "precursors": precursor_list[: len(pump_list)],
         "pumps": [p.name for p in pump_list],
         "pump_status": [p.status.get() for p in pump_list],
         "detectors": ["qepro"],
@@ -140,29 +226,29 @@ def halide_acquire(suggestions: list[dict], actuators, sensors=None, md=None):
 
     # --- Step 1: Set pump infusion rates ---
     yield from set_group_infuse2(
-        SYRINGE_LIST[: len(pump_list)],
+        syringe_list[: len(pump_list)],
         pump_list,
-        set_target_list=SET_TARGET_LIST[: len(pump_list)],
-        target_vol_list=TARGET_VOL_LIST[: len(pump_list)],
+        set_target_list=set_target_list[: len(pump_list)],
+        target_vol_list=target_vol_list[: len(pump_list)],
         rate_list=rate_list,
-        syringe_mater_list=SYRINGE_MATER_LIST[: len(pump_list)],
-        rate_unit=RATE_UNIT,
+        syringe_mater_list=syringe_mater_list[: len(pump_list)],
+        rate_unit=rate_unit,
     )
 
     # --- Step 2: Start pumps ---
     yield from start_group_infuse(pump_list, rate_list)
 
     # --- Step 3: Wait for equilibrium via hardware read ---
-    mixer_pump_list = [[f"{MIXER_LENGTHS_CM[0]} cm", *pump_list]]
-    yield from wait_equilibrium2(mixer_pump_list, ratio=RESIDENT_T_RATIO)
+    mixer_pump_list = [[f"{mixer_lengths_cm[0]} cm", *pump_list]]
+    yield from wait_equilibrium2(mixer_pump_list, ratio=resident_t_ratio)
 
     # --- Step 4: Optional toluene post-dilution ---
-    if POST_DILUTE:
-        dilute_pump = _resolve_pumps([DILUTE_PUMP_NAME])[0]
-        toluene_rate = sum(rate_list) * POST_DILUTE_RATIO
+    if post_dilute:
+        dilute_pump = _resolve_pumps([dilute_pump_name])[0]
+        toluene_rate = sum(rate_list) * post_dilute_ratio
         print(
             f"\nStarted toluene dilution at {toluene_rate:.1f} uL/min, "
-            f"waiting {POST_DILUTE_WAIT_SEC}s"
+            f"waiting {post_dilute_wait_sec}s"
         )
         yield from set_group_infuse2(
             [50],
@@ -171,12 +257,12 @@ def halide_acquire(suggestions: list[dict], actuators, sensors=None, md=None):
             target_vol_list=["30 ml"],
             rate_list=[toluene_rate],
             syringe_mater_list=["steel"],
-            rate_unit=RATE_UNIT,
+            rate_unit=rate_unit,
         )
-        yield from sleep_sec_q(POST_DILUTE_WAIT_SEC)
+        yield from sleep_sec_q(post_dilute_wait_sec)
 
     # --- Step 5: Collect absorbance + fluorescence in a single run ---
-    uid = yield from _acquire_uvvis(_md)
+    uid = yield from _acquire_uvvis(_md, num_abs=num_abs, num_flu=num_flu)
 
     return uid
 
@@ -186,12 +272,21 @@ def halide_acquire(suggestions: list[dict], actuators, sensors=None, md=None):
 # ---------------------------------------------------------------------------
 
 
-def _acquire_uvvis(md):
+def _acquire_uvvis(md, *, num_abs=NUM_ABS, num_flu=NUM_FLU):
     """Collect absorbance and fluorescence spectra in a single Bluesky run.
 
     Produces two streams: 'absorbance' and 'fluorescence'.
     Mirrors xray_uvvis_plan2 (startup/32-bundle-plan.py) without the X-ray
     detector, including the hardware state guard before each mode switch.
+
+    Parameters
+    ----------
+    md : dict
+        Run metadata.
+    num_abs : int
+        Number of absorbance frames to collect.
+    num_flu : int
+        Number of fluorescence frames to collect.
     """
 
     @bpp.stage_decorator([qepro])
@@ -215,7 +310,7 @@ def _acquire_uvvis(md):
             yield from bps.mv(LED, "Low", UV_shutter, "High")
             yield from bps.sleep(2)
 
-        for _ in range(NUM_ABS):
+        for _ in range(num_abs):
             yield from bps.trigger(qepro, wait=True)
             yield from bps.create(name="absorbance")
             yield from bps.read(qepro)
@@ -239,7 +334,7 @@ def _acquire_uvvis(md):
             yield from bps.mv(LED, "High", UV_shutter, "Low")
             yield from bps.sleep(2)
 
-        for _ in range(NUM_FLU):
+        for _ in range(num_flu):
             yield from bps.trigger(qepro, wait=True)
             yield from bps.create(name="fluorescence")
             yield from bps.read(qepro)
@@ -273,11 +368,13 @@ def _resolve_pumps(pump_names):
     return pumps
 
 
-def _resolve_pumps_from_dofs(dof_names):
+def _resolve_pumps_from_dofs(dof_names, dof_to_pump=None):
     """Map DOF names to pump devices via DOF_TO_PUMP mapping."""
+    if dof_to_pump is None:
+        dof_to_pump = DOF_TO_PUMP
     pump_names = []
     for dof in dof_names:
-        pname = DOF_TO_PUMP.get(dof)
+        pname = dof_to_pump.get(dof)
         if pname is None:
             raise ValueError(f"No pump mapping for DOF '{dof}'")
         pump_names.append(pname)
