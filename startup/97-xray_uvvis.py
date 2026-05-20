@@ -418,7 +418,7 @@ def measure_scattering(det, exposure, *, frame_acq_time=0.2, stream_name="scatte
         Name of the event stream for scattering data.
     """
     # Configure area detector exposure
-    yield from configure_area_det(det, exposure, frame_acq_time=frame_acq_time)
+    yield from configure_area_det(det, exposure, frame_acq_time)
 
     # Open fast shutter, acquire, close fast shutter
     yield from bps.mv(fs, -20)
