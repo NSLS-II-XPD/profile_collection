@@ -863,16 +863,16 @@ def xray_uvvis_acquire(
     # Wrap with periodic_dark and metadata injectors when doing x-ray
     if do_xray and not xray_no_dark:
         grand_plan = periodic_dark(acquisition())
-        grand_plan = bpp.msg_mutator(grand_plan, _inject_qualified_dark_frame_uid)
-        grand_plan = bpp.msg_mutator(grand_plan, _inject_calibration_md)
-        grand_plan = bpp.msg_mutator(grand_plan, _inject_analysis_stage)
+        # grand_plan = bpp.msg_mutator(grand_plan, _inject_qualified_dark_frame_uid)
+        # grand_plan = bpp.msg_mutator(grand_plan, _inject_calibration_md)
+        # grand_plan = bpp.msg_mutator(grand_plan, _inject_analysis_stage)
         inner_plan = grand_plan
     elif do_xray and xray_no_dark:
         # X-ray without dark frames — still need calibration/analysis metadata
         grand_plan = acquisition()
-        grand_plan = bpp.msg_mutator(grand_plan, _inject_qualified_dark_frame_uid)
-        grand_plan = bpp.msg_mutator(grand_plan, _inject_calibration_md)
-        grand_plan = bpp.msg_mutator(grand_plan, _inject_analysis_stage)
+        # grand_plan = bpp.msg_mutator(grand_plan, _inject_qualified_dark_frame_uid)
+        # grand_plan = bpp.msg_mutator(grand_plan, _inject_calibration_md)
+        # grand_plan = bpp.msg_mutator(grand_plan, _inject_analysis_stage)
         inner_plan = grand_plan
     else:
         inner_plan = acquisition()
