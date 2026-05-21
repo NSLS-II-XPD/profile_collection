@@ -819,24 +819,8 @@ def xray_uvvis_acquire(
         "precursors": precursor_list[: len(pump_list)],
         "pumps": [p.name for p in pump_list],
         "detectors": detectors_list,
-        "flow_config": flow,
-        "xray_config": xray,
-        "wash_config": wash,
-        "quality_config": quality,
     }
     _md.update(md or {})
-
-    # Verify _md is deepcopy-able before handing it to the run decorator,
-    # which will deepcopy it when opening the run.
-    import copy
-    import pprint
-    try:
-        copy.deepcopy(_md)
-    except Exception as _deepcopy_err:
-        print("ERROR: _md is not deepcopy-able. Exception:", _deepcopy_err)
-        print("_md contents:")
-        pprint.pprint(_md)
-        raise
 
     # Quality monitoring
     monitor = (
