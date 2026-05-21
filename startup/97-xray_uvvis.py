@@ -914,9 +914,18 @@ def _make_sample_name(rate_list):
 
 
 def _resolve_pumps(pump_names):
-    """Resolve pump device objects from their string names in the startup namespace."""
+    """Resolve pump device objects from their string names in the startup namespace.
+
+    Accepts either string device names or already-resolved device objects, so
+    that the function works whether called directly (strings) or after
+    queueserver has pre-resolved the names to objects in the RE environment.
+    """
     pumps = []
     for name in pump_names:
+        if not isinstance(name, str):
+            # Already a device object (e.g. pre-resolved by queueserver).
+            pumps.append(name)
+            continue
         device = globals().get(name)
         if device is None:
             raise ValueError(f"Pump device '{name}' not found in queueserver namespace")
