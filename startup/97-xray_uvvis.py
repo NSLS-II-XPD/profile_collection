@@ -826,6 +826,18 @@ def xray_uvvis_acquire(
     }
     _md.update(md or {})
 
+    # Verify _md is deepcopy-able before handing it to the run decorator,
+    # which will deepcopy it when opening the run.
+    import copy
+    import pprint
+    try:
+        copy.deepcopy(_md)
+    except Exception as _deepcopy_err:
+        print("ERROR: _md is not deepcopy-able. Exception:", _deepcopy_err)
+        print("_md contents:")
+        pprint.pprint(_md)
+        raise
+
     # Quality monitoring
     monitor = (
         PLQualityMonitor(qepro, stream_name="fluorescence") if use_good_bad else None
