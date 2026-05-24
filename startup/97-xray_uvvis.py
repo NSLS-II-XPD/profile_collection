@@ -658,7 +658,7 @@ def steady_state_flow(
         )
 
         # 3. Start; record which ones actually started.
-        yield from start_group_infuse(pump_list+[dilute_pump[0]], rate_list+[PF_rate])
+        yield from start_group_infuse(pump_list, rate_list)
         started_pumps.extend(p for p, r in zip(pump_list, rate_list) if r > 0)
         
         # 3.5 Optional PF dilution
