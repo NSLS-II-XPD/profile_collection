@@ -915,6 +915,8 @@ def xray_uvvis_acquire(
         target_vol_list=target_vol_list[: len(pump_list)],
         set_target_list=set_target_list[: len(pump_list)],
         syringe_mater_list=syringe_mater_list[: len(pump_list)],
+        mixer_lengths_cm=mixer_lengths_cm, 
+        resident_t_ratio=resident_t_ratio,
         post_dilute=post_dilute,
         dilute_pump=dilute_pump, 
         dilute_rate_ratio=post_dilute_ratio,
