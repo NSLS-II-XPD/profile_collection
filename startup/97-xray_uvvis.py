@@ -678,8 +678,15 @@ def steady_state_flow(
     
 
         # 4. Wait for flow equilibrium (hardware-read wait).
-        mixer_pump_list = [[f"{mixer_lengths_cm[0]} cm", *pump_list]]
-        yield from wait_equilibrium2(mixer_pump_list, ratio=resident_t_ratio)
+        if len(mixer_lengths_cm) == 2:
+            mixer_pump_list = [[f"{mixer_lengths_cm[0]} cm", *pump_list[:2]], 
+                               [f"{mixer_lengths_cm[1]} cm", *pump_list[2:]]
+            ]
+            yield from wait_equilibrium2(mixer_pump_list, ratio=resident_t_ratio)
+        
+        else:
+            mixer_pump_list = [[f"{mixer_lengths_cm[0]} cm", *pump_list]]
+            yield from wait_equilibrium2(mixer_pump_list, ratio=resident_t_ratio)
 
         # 5. Optional toluene dilution.
         if post_dilute and dilute_pump is not None:
@@ -870,7 +877,7 @@ def xray_uvvis_acquire(
         # Turn off dilute pump after Uv-Vis to save solvent
         if post_dilute:
             yield from stop_group([dilute_pump[-1]])
-            print(f"\nUv-Vis measurement finished. Turn off {dilute_pump_name[-1] = }")
+            print(f"\nUv-Vis measurement finished. Turn off {dilute_pump_name[-1] = }\n")
 
         # X-ray scattering (optional)
         if do_xray:
