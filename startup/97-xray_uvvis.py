@@ -683,14 +683,14 @@ def steady_state_flow(
 
         # 5. Optional toluene dilution.
         if post_dilute and dilute_pump is not None:
-            toluene_rate = sum(r for r in rate_list if r > 0) * dilute_rate_ratio
+            toluene_rate = sum(r for r in rate_list if r > 0) * dilute_rate_ratio[-1]
             print(
                 f"\nStarted toluene dilution at {toluene_rate:.1f} uL/min, "
                 f"waiting {dilute_wait_sec}s"
             )
             yield from set_group_infuse2(
                 [100],
-                [dilute_pump[1]],
+                [dilute_pump[-1]],
                 set_target_list=[True],
                 target_vol_list=["100 ml"],
                 rate_list=[toluene_rate],
@@ -698,12 +698,8 @@ def steady_state_flow(
                 rate_unit=rate_unit,
             )
             # TODO: start group infuse??
-            try:
-                yield from start_group_infuse([dilute_pump[1]], [toluene_rate])
-                started_pumps.append(dilute_pump[1])
-            except IndexError:
-                yield from start_group_infuse([dilute_pump[-1]], [toluene_rate])
-                started_pumps.append(dilute_pump[-1])
+            yield from start_group_infuse([dilute_pump[-1]], [toluene_rate])
+            started_pumps.append(dilute_pump[-1])
             
             yield from sleep_sec_q(dilute_wait_sec)
 
