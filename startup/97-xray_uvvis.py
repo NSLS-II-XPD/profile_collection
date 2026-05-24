@@ -86,7 +86,7 @@ class FlowConfig(TypedDict, total=False):
     post_dilute: bool
     """Whether to perform toluene post-dilution."""
 
-    post_dilute_ratio: float
+    post_dilute_ratio: list[float]
     """Toluene rate = sum(active_rates) * this ratio."""
 
     post_dilute_wait_sec: float
@@ -95,11 +95,8 @@ class FlowConfig(TypedDict, total=False):
     dof_to_pump: dict[str, str]
     """Mapping of DOF name -> pump device name in the queueserver namespace."""
 
-    dilute_pump_name: str
+    dilute_pump_name: list[str]
     """Device name of the toluene dilution pump."""
-
-    do_dilute: bool
-    """If True, dilute the solution and stop after Uv-Vis measurement."""
 
 
 class XrayConfig(TypedDict, total=False):
@@ -178,7 +175,7 @@ DEFAULT_FLOW_CONFIG: FlowConfig = {
     "resident_t_ratio": 1.0,
     "precursor_list": ["CsPbOA", "TOABr", "ZnI2"],
     "post_dilute": False,
-    "post_dilute_ratio": 1.0,
+    "post_dilute_ratio": [1.0],
     "post_dilute_wait_sec": 30,
     "dof_to_pump": {
         "infusion_rate_CsPb": "dds2_p1",
@@ -187,8 +184,7 @@ DEFAULT_FLOW_CONFIG: FlowConfig = {
         "infusion_rate_Cl": "dds1_p1",
         "infusion_rate_OAm": "dds1_p2",
     },
-    "dilute_pump_name": "dds1_p2",
-    "do_dilute": True,
+    "dilute_pump_name": ["dds1_p2"],
 }
 
 DEFAULT_XRAY_CONFIG: XrayConfig = {
@@ -648,7 +644,7 @@ def steady_state_flow(
 
     def setup():
         # 1. Defensive stop in case a prior run left pumps running.
-        yield from stop_group(pump_list)
+        yield from stop_group(pump_list + dilute_pump)      
 
         # 2. Configure synthesis pumps.
         yield from set_group_infuse2(
@@ -662,8 +658,24 @@ def steady_state_flow(
         )
 
         # 3. Start; record which ones actually started.
-        yield from start_group_infuse(pump_list, rate_list)
+        yield from start_group_infuse(pump_list+[dilute_pump[0]], rate_list+[PF_rate])
         started_pumps.extend(p for p, r in zip(pump_list, rate_list) if r > 0)
+        
+        # 3.5 Optional PF dilution
+        if post_dilute and dilute_pump is not None:
+            PF_rate = sum(r for r in rate_list if r > 0) * dilute_rate_ratio[0]
+            yield from set_group_infuse2(
+                [20],
+                [dilute_pump[0]],
+                set_target_list=[True],
+                target_vol_list=["20 ml"],
+                rate_list=[PF_rate],
+                syringe_mater_list=["plastic_BD"],
+                rate_unit=rate_unit,
+            )
+            yield from start_group_infuse([dilute_pump[0]], [PF_rate])
+            started_pumps.append(dilute_pump[0])
+    
 
         # 4. Wait for flow equilibrium (hardware-read wait).
         mixer_pump_list = [[f"{mixer_lengths_cm[0]} cm", *pump_list]]
@@ -677,16 +689,22 @@ def steady_state_flow(
                 f"waiting {dilute_wait_sec}s"
             )
             yield from set_group_infuse2(
-                [50],
-                [dilute_pump],
+                [100],
+                [dilute_pump[1]],
                 set_target_list=[True],
-                target_vol_list=["30 ml"],
+                target_vol_list=["100 ml"],
                 rate_list=[toluene_rate],
                 syringe_mater_list=["steel"],
                 rate_unit=rate_unit,
             )
             # TODO: start group infuse??
-            started_pumps.append(dilute_pump)
+            try:
+                yield from start_group_infuse([dilute_pump[1]], [toluene_rate])
+                started_pumps.append(dilute_pump[1])
+            except IndexError:
+                yield from start_group_infuse([dilute_pump[-1]], [toluene_rate])
+                started_pumps.append(dilute_pump[-1])
+            
             yield from sleep_sec_q(dilute_wait_sec)
 
     def teardown():
@@ -780,7 +798,8 @@ def xray_uvvis_acquire(
     post_dilute = flow["post_dilute"]
     dof_to_pump = flow["dof_to_pump"]
     dilute_pump_name = flow["dilute_pump_name"]
-    do_dilute = flow["do_dilute"]
+    post_dilute_ratio = flow["post_dilute_ratio"]
+    post_dilute_wait_sec = flow["post_dilute_wait_sec"]
 
     do_xray = xray["do_xray"]
     xray_exposure = xray["exposure"]
@@ -837,7 +856,7 @@ def xray_uvvis_acquire(
     # Determine which detectors to stage
     stage_devices = [qepro, pe1c] if do_xray else [qepro]
 
-    dilute_pump = _resolve_pumps([dilute_pump_name])[0] if post_dilute else None
+    dilute_pump = _resolve_pumps(dilute_pump_name) if post_dilute else None
     
     # Acquisition plan
     @bpp.subs_decorator(subs)
@@ -853,9 +872,9 @@ def xray_uvvis_acquire(
         yield from bps.mv(LED, "Low", UV_shutter, "Low")
         
         # Turn off dilute pump after Uv-Vis to save solvent
-        if do_dilute:
-            yield from stop_group([dilute_pump])
-            print(f"\nUv-Vis measurement finished. Turn off {dilute_pump_name = }")
+        if post_dilute:
+            yield from stop_group([dilute_pump[-1]])
+            print(f"\nUv-Vis measurement finished. Turn off {dilute_pump_name[-1] = }")
 
         # X-ray scattering (optional)
         if do_xray:
@@ -894,7 +913,9 @@ def xray_uvvis_acquire(
         set_target_list=set_target_list[: len(pump_list)],
         syringe_mater_list=syringe_mater_list[: len(pump_list)],
         post_dilute=post_dilute,
-        dilute_pump=dilute_pump,
+        dilute_pump=dilute_pump, 
+        dilute_rate_ratio=post_dilute_ratio,
+        dilute_wait_sec=post_dilute_wait_sec, 
     )
 
     # Optional wash loop — flush tubing with wash solvent before next iteration
