@@ -98,6 +98,9 @@ class FlowConfig(TypedDict, total=False):
     dilute_pump_name: str
     """Device name of the toluene dilution pump."""
 
+    do_dilute: bool
+    """If True, dilute the solution and stop after Uv-Vis measurement."""
+
 
 class XrayConfig(TypedDict, total=False):
     """X-ray scattering acquisition configuration."""
@@ -185,6 +188,7 @@ DEFAULT_FLOW_CONFIG: FlowConfig = {
         "infusion_rate_OAm": "dds1_p2",
     },
     "dilute_pump_name": "dds1_p2",
+    "do_dilute": True,
 }
 
 DEFAULT_XRAY_CONFIG: XrayConfig = {
@@ -776,6 +780,7 @@ def xray_uvvis_acquire(
     post_dilute = flow["post_dilute"]
     dof_to_pump = flow["dof_to_pump"]
     dilute_pump_name = flow["dilute_pump_name"]
+    do_dilute = flow["do_dilute"]
 
     do_xray = xray["do_xray"]
     xray_exposure = xray["exposure"]
@@ -832,6 +837,8 @@ def xray_uvvis_acquire(
     # Determine which detectors to stage
     stage_devices = [qepro, pe1c] if do_xray else [qepro]
 
+    dilute_pump = _resolve_pumps([dilute_pump_name])[0] if post_dilute else None
+    
     # Acquisition plan
     @bpp.subs_decorator(subs)
     @bpp.set_run_key_decorator("xray_uvvis_acquire")
@@ -844,6 +851,11 @@ def xray_uvvis_acquire(
         yield from _pl_with_quality_gate(qepro, monitor, num_flu, good_target, max_bad)
         # Turn off LED and UV shutter before x-ray (and as general cleanup)
         yield from bps.mv(LED, "Low", UV_shutter, "Low")
+        
+        # Turn off dilute pump after Uv-Vis to save solvent
+        if do_dilute:
+            yield from stop_group([dilute_pump])
+            print(f"\nUv-Vis measurement finished. Turn off {dilute_pump_name = }")
 
         # X-ray scattering (optional)
         if do_xray:
@@ -854,7 +866,7 @@ def xray_uvvis_acquire(
                 stream_name=xray_stream_name,
             )
 
-    dilute_pump = _resolve_pumps([dilute_pump_name])[0] if post_dilute else None
+    
 
     # Wrap with periodic_dark and metadata injectors when doing x-ray
     if do_xray and not xray_no_dark:
