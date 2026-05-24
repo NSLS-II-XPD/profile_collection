@@ -680,7 +680,7 @@ def steady_state_flow(
         # 4. Wait for flow equilibrium (hardware-read wait).
         if len(mixer_lengths_cm) == 2:
             mixer_pump_list = [[f"{mixer_lengths_cm[0]} cm", *pump_list[:2]], 
-                               [f"{mixer_lengths_cm[1]} cm", *pump_list[2:]]
+                               [f"{mixer_lengths_cm[1]} cm", *pump_list[:]]
             ]
             yield from wait_equilibrium2(mixer_pump_list, ratio=resident_t_ratio)
         
