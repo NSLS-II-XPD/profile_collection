@@ -948,6 +948,9 @@ def xray_uvvis_acquire(
             rate_unit=rate_unit,
         )
 
+    # Stop all pumps to finish the plan
+    yield from stop_group(wash_pumps + pump_list + dilute_pump)
+
     return uid
 
 
