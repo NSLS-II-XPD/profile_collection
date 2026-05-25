@@ -81,7 +81,10 @@ class FlowConfig(TypedDict, total=False):
     """Multiplier of the residence time to wait for equilibrium."""
 
     precursor_list: list[str]
-    """Precursor names (metadata only)."""
+    """Precursor detailed names (metadata only)."""
+    
+    precursor_prefix_list: list[str]
+    """Precursor prefix for making smaple name (metadata only)."""
 
     post_dilute: bool
     """Whether to perform toluene post-dilution."""
@@ -174,6 +177,7 @@ DEFAULT_FLOW_CONFIG: FlowConfig = {
     "mixer_lengths_cm": [30.0],
     "resident_t_ratio": 1.0,
     "precursor_list": ["CsPbOA", "TOABr", "ZnI2"],
+    "precursor_prefix_list":['CsPb', 'Br', 'I2'], 
     "post_dilute": False,
     "post_dilute_ratio": [1.0],
     "post_dilute_wait_sec": 30,
@@ -481,7 +485,8 @@ def measure_pl(qepro, n_shots, *, stream="fluorescence", settle_sec=2):
         yield from bps.trigger_and_read([qepro], name=stream)
 
 
-def measure_scattering(det, exposure, *, frame_acq_time=0.2, stream_name="scattering"):
+# def measure_scattering(det, exposure, *, frame_acq_time=0.2, stream_name="scattering"):
+def measure_scattering(det, stream_name="scattering"):
     """Configure and trigger the area detector for X-ray scattering.
 
     This is a streamlined version of ``_inner_scattering`` from 94-CHL-plans.py,
@@ -506,7 +511,8 @@ def measure_scattering(det, exposure, *, frame_acq_time=0.2, stream_name="scatte
         Name of the event stream for scattering data.
     """
     # Configure area detector exposure
-    yield from configure_area_det(det, exposure, acq_time=frame_acq_time)
+    # sp_md = yield from _pre_plan([det], exposure, frame_acq_time=frame_acq_time)
+    # yield from configure_area_det(det, exposure, acq_time=frame_acq_time)
 
     # Open fast shutter, acquire, close fast shutter
     yield from bps.mv(fs, -20)
@@ -798,6 +804,7 @@ def xray_uvvis_acquire(
     mixer_lengths_cm = flow["mixer_lengths_cm"]
     resident_t_ratio = flow["resident_t_ratio"]
     precursor_list = flow["precursor_list"]
+    precursor_prefix_list = flow["precursor_prefix_list"]
     post_dilute = flow["post_dilute"]
     dof_to_pump = flow["dof_to_pump"]
     dilute_pump_name = flow["dilute_pump_name"]
@@ -831,12 +838,15 @@ def xray_uvvis_acquire(
     # Resolve pump devices
     pump_list = _resolve_pumps_from_dofs(dof_names, dof_to_pump)
 
-    sample_type = _make_sample_name(rate_list)
+    sample_type = _make_sample_name(rate_list, precursor_prefix_list)
 
     # Build metadata — include full resolved configs for reproducibility
     detectors_list = ["qepro"]
     if do_xray:
         detectors_list.append("pe1c")
+        
+    # Configure area detector exposure
+    sp_md = yield from _pre_plan([pe1c], xray_exposure, frame_acq_time=xray_frame_acq_time)
 
     _md = {
         "sample_type": sample_type,
@@ -848,6 +858,7 @@ def xray_uvvis_acquire(
         "detectors": detectors_list,
     }
     _md.update(md or {})
+    _md.update(sp_md)
 
     # Quality monitoring
     monitor = (
@@ -883,8 +894,8 @@ def xray_uvvis_acquire(
         if do_xray:
             yield from measure_scattering(
                 pe1c,
-                xray_exposure,
-                frame_acq_time=xray_frame_acq_time,
+                # xray_exposure,
+                # frame_acq_time=xray_frame_acq_time,
                 stream_name=xray_stream_name,
             )
 
@@ -945,9 +956,11 @@ def xray_uvvis_acquire(
 # ---------------------------------------------------------------------------
 
 
-def _make_sample_name(rate_list):
+def _make_sample_name(rate_list, precursor_prefix_list):
     """Generate a sample name from pump rates."""
-    parts = [f"{r:.1f}" for r in rate_list]
+    # parts = [f"{r:.1f}" for r in rate_list]
+    rates = [f"{int(r):03d}" for r in rate_list]
+    parts = [c for pair in zip(precursor_prefix_list, rates) for c in pair]
     return "_".join(parts)
 
 
