@@ -879,11 +879,13 @@ def xray_uvvis_acquire(
     @bpp.stage_decorator(stage_devices)
     @bpp.run_decorator(md=_md)
     def acquisition():
-        # UV-Vis: fluorescence
-        yield from _pl_with_quality_gate(qepro, monitor, num_flu, good_target, max_bad)
         
         # UV-Vis: absorbance
         yield from measure_absorbance(qepro, num_abs)
+        
+        # UV-Vis: fluorescence
+        yield from _pl_with_quality_gate(qepro, monitor, num_flu, good_target, max_bad)
+        
         # Turn off LED and UV shutter before x-ray (and as general cleanup)
         yield from bps.mv(LED, "Low", UV_shutter, "Low")
         
