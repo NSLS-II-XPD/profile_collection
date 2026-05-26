@@ -832,7 +832,13 @@ def xray_uvvis_acquire(
     suggestion = suggestions[0]
 
     # Extract rates from suggestion — DOF names like "infusion_rate_CsPb"
-    dof_names = sorted(k for k in suggestion.keys() if k.startswith("infusion_rate"))
+    dof_names=[]
+    for n in precursor_prefix_list:
+        for k in suggestion.keys():
+            if n in k:
+                dof_names.append(k)
+                
+    # dof_names = sorted(k for k in suggestion.keys() if k.startswith("infusion_rate"))
     rate_list = [float(suggestion[name]) for name in dof_names]
 
     # Resolve pump devices
