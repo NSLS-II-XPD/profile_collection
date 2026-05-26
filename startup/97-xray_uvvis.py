@@ -890,7 +890,7 @@ def xray_uvvis_acquire(
         # Turn off dilute pump after Uv-Vis to save solvent
         if post_dilute:
             yield from stop_group([dilute_pump[-1]])
-            dilute_pump[-1].stop_pump()
+            ultra1.stop_pump()
             print(f"\nUv-Vis measurement finished. Turn off {dilute_pump_name[-1] = }\n")
 
         # X-ray scattering (optional)
