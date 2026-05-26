@@ -879,15 +879,18 @@ def xray_uvvis_acquire(
     @bpp.stage_decorator(stage_devices)
     @bpp.run_decorator(md=_md)
     def acquisition():
-        # UV-Vis: absorbance then fluorescence
-        yield from measure_absorbance(qepro, num_abs)
+        # UV-Vis: fluorescence
         yield from _pl_with_quality_gate(qepro, monitor, num_flu, good_target, max_bad)
+        
+        # UV-Vis: absorbance
+        yield from measure_absorbance(qepro, num_abs)
         # Turn off LED and UV shutter before x-ray (and as general cleanup)
         yield from bps.mv(LED, "Low", UV_shutter, "Low")
         
         # Turn off dilute pump after Uv-Vis to save solvent
         if post_dilute:
             yield from stop_group([dilute_pump[-1]])
+            dilute_pump[-1].stop_pump()
             print(f"\nUv-Vis measurement finished. Turn off {dilute_pump_name[-1] = }\n")
 
         # X-ray scattering (optional)
