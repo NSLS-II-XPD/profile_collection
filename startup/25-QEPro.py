@@ -456,7 +456,8 @@ class QEPro(Device):
 
         if data_agent == 'tiled':
             run = tiled_client[uid]
-            ds = run.primary.read()
+            stream_name = list(run.stop['num_events'].keys())[0]
+            ds = run[stream_name].read()
             meta = run.metadata
 
             date, time = _readable_time(int(ds['time'][0]))

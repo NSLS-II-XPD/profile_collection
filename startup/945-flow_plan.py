@@ -327,11 +327,11 @@ def take_a_uvvis_csv_q(sample_type='test', plot=False, csv_path=None, data_agent
     
     yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
 
-    print(f'\n\n========== {uid = } ==========\n\n')
+    print(f'\n========== {uid = } ==========\n')
 
     if csv_path!=None or plot==True:
         yield from bps.sleep(2)
-        qepro.export_from_scan(uid[1], csv_path, sample_type, plot=plot, data_agent=data_agent)
+        qepro.export_from_scan(uid, csv_path, sample_type, plot=plot, data_agent=data_agent)
         
 
 
