@@ -242,3 +242,6 @@ else:
 
     # def ct_60():
     #     yield from RE.beamtime.scanplans["ct_60"].factory()
+
+from bluesky_kafka import Publisher as kpub
+res = nslsii.configure_kafka_publisher(RE, beamline_name="xpd")
