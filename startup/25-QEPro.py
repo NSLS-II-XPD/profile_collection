@@ -548,6 +548,7 @@ try:
     from tiled.client import from_profile
     # tiled_client = from_profile("xpd-ldrd20-31")
     tiled_client = from_profile("xpd")
+    tiled_client.context.http_client.headers['tiled-qos'] = 'acquisition'
 except CannotPrompt:
     print("Tiled client cannot prompt for login. QEPro export to csv will not work.")
 except (NameError, ModuleNotFoundError):
