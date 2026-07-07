@@ -1,11 +1,8 @@
 [project]
 channels = ["conda-forge"]
 name = "xpd-profile-collection"
-platforms = ["linux-64"]
+platforms = [{ platform = "linux-64", glibc = "2.17" }]
 version = "2025-3.0"
-
-[system-requirements]
-libc = "2.17"
 
 [feature.profile.dependencies]
 bluesky-base = "==1.14.4"
@@ -34,10 +31,8 @@ pydantic-numpy = ">=8.0.0,<9"
 p4p = ">=4.2.0,<5"
 epicscorelibs = ">=7.0.7.99.1.1,<8"
 
-
 [feature.profile.pypi-dependencies]
 ophyd-async = { version = ">0.10.0", extras = ["ca", "pva"] }
-
 
 [feature.qs.dependencies]
 bluesky-queueserver = "*"
@@ -51,12 +46,10 @@ bluesky-httpserver = "*"
 qs-backend = "start-re-manager --profile-dir=."
 qs-server = "uvicorn --host localhost --port 60610 bluesky_httpserver.server:app"
 
-
 [feature.terminal.dependencies]
 ipython = ">=9.5.0"
 pyside6 = "*"
 numpy = ">2"
-
 
 [feature.terminal.tasks]
 start = "unset SESSION_MANAGER && MPLBACKEND=qtagg ipython --profile-dir=."
