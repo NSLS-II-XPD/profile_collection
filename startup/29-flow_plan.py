@@ -16,27 +16,6 @@ mixer = ['30 cm']
 syringe_mater_list=['steel', 'steel']
 '''
 
-ophyd_map = {
-	'dds2_p1': dds2_p1, 
- 	'dds2_p2': dds2_p2, 
-  	'dds3_p2': dds3_p2, 
-   	'dds3_p1': dds3_p1, 
-	'dds1_p1': dds1_p1, 
- 	'ultra1': ultra1, 
-  	'ultra2': ultra2, 
-   	'dds1_p2': dds1_p2, 
-    'qepro': qepro, 
-    'pe1c': pe1c
-}
-
-def _find_ophyd(device_name:str):
-    if device_name in ophyd_map:
-        return ophyd_map[device_name]
-    else:
-        # raise ValueError(f"Device {device_name} not found in ophyd_map. Available devices: {list(ophyd_map.keys())}")
-        print(f"Device {device_name} not found in ophyd_map. Available devices: {list(ophyd_map.keys())}")
-        print(f"\nreturning {device_name} as a string instead of ophyd object.")
-        return device_name
 
 def reset_pumps(pump_list, clear=True, update = '.2 second'):
     for pump in pump_list:
@@ -101,10 +80,6 @@ def set_group_infuse2(
 
         vol = float(j.split(' ')[0])
         vol_unit = j.split(' ')[1]
-        
-        ## Trun the string input of pump to ophyd object if it's a string 
-        if type(i) is str:
-            i = _find_ophyd(i)
 
         ## When rate_list[i] is string, in the form of '100 ul/min', get rate unit from spliting str
         if type(k)==str:
@@ -144,8 +119,6 @@ def start_group_infuse(pump_list, rate_list):
         if rate == 0.0:
             pass
         else:
-            if type(pump) is str:
-                pump = _find_ophyd(pump)
             yield from pump.infuse_pump2()
 
 
@@ -156,8 +129,6 @@ def start_group_withdraw(pump_list):
 
 def stop_group(pump_list):
     for pump in pump_list:
-        if type(pump) is str:
-            pump = _find_ophyd(pump)
         yield from pump.stop_pump2()
 
 
@@ -262,7 +233,7 @@ def count_stream(det, stream_name="primary", md=None):
         reading = (yield from bps.read(det))
         yield from bps.save()
 
-    return(yield from _inner_count())
+    yield from _inner_count()
 
 
 def take_a_uvvis_csv_q(sample_type='test', plot=False, csv_path=None, data_agent='tiled',
@@ -270,7 +241,6 @@ def take_a_uvvis_csv_q(sample_type='test', plot=False, csv_path=None, data_agent
                         pump_list=None, precursor_list=None, mixer=None, note=None, md=None):
 
     if (pump_list != None and precursor_list != None):
-        pump_list = [_find_ophyd(pump) if type(pump) is str else pump for pump in pump_list]
         _md = {"pumps" : [pump.name for pump in pump_list],
                 "precursors" : precursor_list,
                 "infuse_rate" : [pump.read_infuse_rate.get() for pump in pump_list],
@@ -324,22 +294,15 @@ def take_a_uvvis_csv_q(sample_type='test', plot=False, csv_path=None, data_agent
             yield from bps.sleep(2)
             uid = (yield from count_stream(qepro, stream_name="take_a_uvvis", md=_md))
 
-    
+    # yield from bps.create(name="take_a_uvvis")
     yield from bps.mv(LED, 'Low', UV_shutter, 'Low')
-
-    print(f'\n========== {uid = } ==========\n')
 
     if csv_path!=None or plot==True:
         yield from bps.sleep(2)
         qepro.export_from_scan(uid, csv_path, sample_type, plot=plot, data_agent=data_agent)
-        
 
 
-def test_return_uid():
-    uid = (yield from count_stream(qepro, stream_name="take_a_uvvis", md={}))
-    print(f'\n\n========== {uid = } ==========\n\n')
-    return uid
-    
+
 
 def l_unit_converter(l0 = 'm', l1 = 'm'):
     l_unit = ['mm', 'cm', 'm']
@@ -399,8 +362,6 @@ def wait_equilibrium2(mixer_pump_list, ratio=1, tubing_ID_mm=1.016):
 
     res_time_sec=0
 
-    # mixer_pump_list = [_find_ophyd(item) if type(item) is str else item for item in mixer_pump_list]
-
     for mixer_pump in mixer_pump_list:
 
         ## Calculate total volume (mm3) of mixer
@@ -412,18 +373,20 @@ def wait_equilibrium2(mixer_pump_list, ratio=1, tubing_ID_mm=1.016):
         mixer_vol_mm3 = np.pi*((tubing_ID_mm/2)**2)*mixer_meter*1000
 
         ## Sum up all rates in each mixer
-        
-        ## Trun the string input of pump to ophyd object if it's a string
-        pump_list = [_find_ophyd(pump) if type(pump) is str else pump for pump in mixer_pump[1:]]
-        
-        infuse_rates = [pump.read_infuse_rate.get() for pump in pump_list]
-        infuse_rate_unit = [pump.read_infuse_rate_unit.get() for pump in pump_list]
+        infuse_rates = [pump.read_infuse_rate.get() for pump in mixer_pump[1:]]
+        infuse_rate_unit = [pump.read_infuse_rate_unit.get() for pump in mixer_pump[1:]]
+        pump_status = [pump.status.get() for pump in mixer_pump[1:]]
         total_rate = 0
         for i in range(len(infuse_rates)):
             rate = infuse_rates[i]
             rate_unit = infuse_rate_unit[i]
             unit_const = vol_unit_converter(v0=rate_unit[:2], v1='ul')/t_unit_converter(t0=rate_unit[3:], t1='min')
-            total_rate += rate*unit_const
+            if pump_status[i] == "Infusing":
+                _is_infusing = 1.0
+            else:
+                _is_infusing = 0.0
+
+            total_rate += rate * unit_const * _is_infusing
 
         res_time_sec += 60*mixer_vol_mm3/total_rate
 
