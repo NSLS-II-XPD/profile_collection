@@ -54,6 +54,14 @@ qs-server = "uvicorn --host localhost --port 60610 bluesky_httpserver.server:app
 ipython = ">=9.5.0"
 pyside6 = "*"
 numpy = ">2"
+pymatgen = "*"
+botorch = "*"
+gpytorch = "*"
+"diffpy.pdffit2" = "*"
+"diffpy.structure" = "*"
+
+[feature.terminal.pypi-dependencies]
+blop = { git = "https://github.com/bluesky/blop.git", rev = "testing-xpd", extras = ["cpu"] }
 
 [feature.terminal.tasks]
 start = "unset SESSION_MANAGER && MPLBACKEND=qtagg ipython --profile-dir=$HOME/.ipython/profile_$BS_PROFILE"

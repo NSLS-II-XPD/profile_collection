@@ -169,30 +169,29 @@ class QualityConfig(TypedDict, total=False):
 
 
 DEFAULT_FLOW_CONFIG: FlowConfig = {
-    "syringe_list": [50, 50, 50],
-    "syringe_mater_list": ["steel", "steel", "steel"],
-    "target_vol_list": ["30 ml", "30 ml", "30 ml"],
-    "set_target_list": [True, True, True],
+    "syringe_list": [50, 50, 50, 50],
+    "syringe_mater_list": ["steel", "steel", "steel", "steel"],
+    "target_vol_list": ["30 ml", "30 ml", "30 ml", "30 ml"],
+    "set_target_list": [True, True, True, True],
     "rate_unit": "ul/min",
     "mixer_lengths_cm": [30.0],
     "resident_t_ratio": 1.0,
-    "precursor_list": ["CsPbOA", "TOABr", "ZnI2"],
-    "precursor_prefix_list":['CsPb', 'Br', 'I2'], 
-    "post_dilute": False,
+    "precursor_list": ["CsPbOA", "TOABr", "ZnI2", "OAm"],
+    "precursor_prefix_list":['CsPb', 'Br', 'I2', "OAm"], 
+    "post_dilute": True,
     "post_dilute_ratio": [1.0],
     "post_dilute_wait_sec": 30,
     "dof_to_pump": {
         "infusion_rate_CsPb": "dds2_p1",
         "infusion_rate_Br": "dds2_p2",
         "infusion_rate_I2": "dds3_p1",
-        "infusion_rate_Cl": "dds1_p1",
-        "infusion_rate_OAm": "dds1_p2",
+        "infusion_rate_OAm": "dds2_p2",
     },
-    "dilute_pump_name": ["dds1_p2"],
+    "dilute_pump_name": ["dds1_p1", "ultra2"],
 }
 
 DEFAULT_XRAY_CONFIG: XrayConfig = {
-    "do_xray": False,
+    "do_xray": True,
     "exposure": 5.0,
     "frame_acq_time": 0.2,
     "stream_name": "scattering",
@@ -200,8 +199,8 @@ DEFAULT_XRAY_CONFIG: XrayConfig = {
 }
 
 DEFAULT_WASH_CONFIG: WashConfig = {
-    "do_wash": False,
-    "pump_names": [],
+    "do_wash": True,
+    "pump_names": ["ultra1"],
     "syringe_list": [50],
     "rate_list": ["500 ul/min"],
     "duration_sec": 60,
@@ -211,7 +210,7 @@ DEFAULT_WASH_CONFIG: WashConfig = {
 }
 
 DEFAULT_QUALITY_CONFIG: QualityConfig = {
-    "use_good_bad": False,
+    "use_good_bad": True,
     "good_target": 3,
     "max_bad": 3,
     "num_abs": 10,
@@ -898,7 +897,7 @@ def xray_uvvis_acquire(
         # Turn off dilute pump after Uv-Vis to save solvent
         if post_dilute:
             yield from stop_group([dilute_pump[-1]])
-            ultra1.stop_pump()
+            dilute_pump[-1].stop_pump()
             print(f"\nUv-Vis measurement finished. Turn off {dilute_pump_name[-1] = }\n")
 
         # X-ray scattering (optional)
