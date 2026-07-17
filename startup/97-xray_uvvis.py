@@ -195,7 +195,7 @@ DEFAULT_XRAY_CONFIG: XrayConfig = {
     "exposure": 5.0,
     "frame_acq_time": 0.2,
     "stream_name": "scattering",
-    "no_dark": False,
+    "no_dark": True,
 }
 
 DEFAULT_WASH_CONFIG: WashConfig = {

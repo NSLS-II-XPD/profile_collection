@@ -32,7 +32,7 @@ import pearson_multi_phase as pmp
 # Simulated G(r) reference files bundled with the repo
 # ---------------------------------------------------------------------------
 _SIMULATED_GR_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "Matt_multi_phase"
+    os.path.dirname(__file__), ".", "data_files"
 )
 _SIMULATED_GR_FILES = ("CsBr.gr", "CsPbBr3.gr", "Cs4PbBr6.gr")
 
