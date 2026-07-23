@@ -100,7 +100,8 @@ def main() -> int:
         choices=[mode.value for mode in PdfEvaluationMode],
         default=PdfEvaluationMode.PDF_FIT_OBJECTIVES.value,
         help=(
-            "PDF evaluation mode: raw_only skips pdffit2; pdf_fit_objectives "
+            "PDF evaluation mode: disabled skips all PDF reads and metrics; "
+            "raw_only computes raw correlations only; pdf_fit_objectives "
             "optimizes fitted correlations; raw_objectives_pdf_fit_tracked "
             "optimizes raw correlations and records fitted correlations when available."
         ),

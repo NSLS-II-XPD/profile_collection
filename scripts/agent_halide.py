@@ -116,7 +116,9 @@ def build_dofs(use_OAm: bool = False) -> list[RangeDOF]:
 def build_objectives(pdf_fit_config: PdfFitConfig | None = None) -> list[Objective]:
     """Build objectives for the halide perovskite optimization."""
     pdf_fit_config = pdf_fit_config or PdfFitConfig()
-    if pdf_fit_config.mode is PdfEvaluationMode.PDF_FIT_OBJECTIVES:
+    if pdf_fit_config.mode is PdfEvaluationMode.DISABLED:
+        pdf_objectives = []
+    elif pdf_fit_config.mode is PdfEvaluationMode.PDF_FIT_OBJECTIVES:
         pdf_objectives = [
             Objective(name="pdf_fit_corr_CsPbBr3", minimize=False),
             Objective(name="pdf_fit_corr_CsBr", minimize=True),

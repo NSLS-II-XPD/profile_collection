@@ -68,6 +68,7 @@ _TILED_RETRY_DELAY = 2.0  # seconds between attempts
 class PdfEvaluationMode(str, Enum):
     """How PDF correlations and pdffit2 metrics are used by evaluation."""
 
+    DISABLED = "disabled"
     RAW_ONLY = "raw_only"
     PDF_FIT_OBJECTIVES = "pdf_fit_objectives"
     RAW_OBJECTIVES_PDF_FIT_TRACKED = "raw_objectives_pdf_fit_tracked"
@@ -399,6 +400,9 @@ class HalideEvaluation:
 
     def _process_pdf(self, pdf_data: dict, uid: str | None = None) -> dict:
         """Compute PDF outcomes according to the configured evaluation mode."""
+        if self.pdf_fit_config.mode is PdfEvaluationMode.DISABLED:
+            return {}
+
         results = self._raw_pdf_correlations(pdf_data)
 
         if self.pdf_fit_config.mode is PdfEvaluationMode.RAW_ONLY:
@@ -771,8 +775,11 @@ class HalideEvaluation:
         plqy = self._compute_plqy(abs_offset, wavelength, PL_integral) if has_peak else 0.0
 
         # --- PDF correlations ---
-        pdf_data = self._read_pdfstream_data(uid)
-        pdf_correlations = self._process_pdf(pdf_data, uid=uid)
+        if self.pdf_fit_config.mode is PdfEvaluationMode.DISABLED:
+            pdf_correlations = {}
+        else:
+            pdf_data = self._read_pdfstream_data(uid)
+            pdf_correlations = self._process_pdf(pdf_data, uid=uid)
 
         return [
             {
