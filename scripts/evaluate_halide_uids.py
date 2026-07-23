@@ -4,11 +4,11 @@ Examples
 --------
 Evaluate UIDs from the command line and print JSON::
 
-    python scripts/ML_agent/evaluate_halide_uids.py UID1 UID2
+    python scripts/evaluate_halide_uids.py UID1 UID2
 
 Evaluate UIDs listed one-per-line in a text file and save CSV::
 
-    python scripts/ML_agent/evaluate_halide_uids.py --uids-file uids.txt --output outcomes.csv
+    python scripts/evaluate_halide_uids.py --uids-file uids.txt --output outcomes.csv
 
 For quick beamline use, you can also edit the UIDS list below and run this
 script with no positional UID arguments.
@@ -34,7 +34,7 @@ HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
-from evaluation_halide import HalideEvaluation
+from evaluation_halide import HalideEvaluation, PdfEvaluationMode, PdfFitConfig
 from agent_halide import PLQY_PARAMS, SANDBOX_URI, SANDBOX_CATALOG, TILED_PROFILE
 
 
@@ -95,6 +95,16 @@ def main() -> int:
         "--output",
         help="Optional output CSV path. Results are always printed as JSON.",
     )
+    parser.add_argument(
+        "--pdf-mode",
+        choices=[mode.value for mode in PdfEvaluationMode],
+        default=PdfEvaluationMode.PDF_FIT_OBJECTIVES.value,
+        help=(
+            "PDF evaluation mode: raw_only skips pdffit2; pdf_fit_objectives "
+            "optimizes fitted correlations; raw_objectives_pdf_fit_tracked "
+            "optimizes raw correlations and records fitted correlations when available."
+        ),
+    )
     args = parser.parse_args()
 
     uids = _load_uids(args)
@@ -105,6 +115,7 @@ def main() -> int:
         tiled_client=raw_client,
         sandbox_client=sandbox_client,
         plqy_params=PLQY_PARAMS,
+        pdf_fit_config=PdfFitConfig(mode=args.pdf_mode),
     )
 
     outcomes = []
