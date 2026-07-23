@@ -5,28 +5,39 @@ callable class compatible with the Blop ``Agent`` evaluation_function interface:
 
     def __call__(self, uid: str, suggestions: list[dict]) -> list[dict]
 
-Each returned dict contains ``Peak``, ``log_FWHM``, ``log_PLQY``,
-``corr_CsBr``, ``corr_CsPbBr3``, ``corr_Cs4PbBr6``, and ``_id`` keys.
+Each returned dict contains optical metrics, raw PDF correlations, and,
+depending on mode, PDF-fit correlations for the same phase references.
 """
 
 from __future__ import annotations
 
-import sys
 import os
+import sys
 import time
+import logging
+from dataclasses import dataclass, replace
+from enum import Enum
+from tempfile import TemporaryDirectory
+
 import numpy as np
 import pandas as pd
+from diffpy.pdffit2 import PdfFit
+from diffpy.structure import loadStructure
+from pymatgen.io.cif import CifParser, CifWriter
 from scipy import integrate
 from tiled.queries import Eq
 
 # Add utils to path so we can import _data_analysis / _data_export / pearson_multi_phase
-_utils_dir = os.path.join(os.path.dirname(__file__), "..", "utils")
+_utils_dir = os.path.join(os.path.dirname(__file__), "utils")
 if _utils_dir not in sys.path:
     sys.path.insert(0, _utils_dir)
 
 import _data_analysis as da
 import _data_export as de
 import pearson_multi_phase as pmp
+
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Simulated G(r) reference files bundled with the repo
@@ -35,6 +46,17 @@ _SIMULATED_GR_PATH = os.path.join(
     os.path.dirname(__file__), ".", "data_files"
 )
 _SIMULATED_GR_FILES = ("CsBr.gr", "CsPbBr3.gr", "Cs4PbBr6.gr")
+_PDF_FIT_CIF_FILES = {
+    "CsBr": "CsBr.cif",
+    "CsPbBr3": "CsPbBr3.cif",
+    "Cs4PbBr6": "Cs4PbBr6.cif",
+}
+
+_RAW_PDF_NAME_MAP = {
+    "CsBr.gr correlation": "corr_CsBr",
+    "CsPbBr3.gr correlation": "corr_CsPbBr3",
+    "Cs4PbBr6.gr correlation": "corr_Cs4PbBr6",
+}
 
 # ---------------------------------------------------------------------------
 # Retry configuration for all Tiled reads
@@ -43,11 +65,135 @@ _TILED_MAX_RETRIES = 10
 _TILED_RETRY_DELAY = 2.0  # seconds between attempts
 
 
+class PdfEvaluationMode(str, Enum):
+    """How PDF correlations and pdffit2 metrics are used by evaluation."""
+
+    RAW_ONLY = "raw_only"
+    PDF_FIT_OBJECTIVES = "pdf_fit_objectives"
+    RAW_OBJECTIVES_PDF_FIT_TRACKED = "raw_objectives_pdf_fit_tracked"
+
+
+@dataclass(frozen=True)
+class PdfFitConfig:
+    """Configuration for PDF correlation and optional pdffit2 refinement."""
+
+    mode: PdfEvaluationMode | str = PdfEvaluationMode.PDF_FIT_OBJECTIVES
+    qmax: float = 18.0
+    rmax: float = 120.0
+    qdamp: float = 0.031
+    qbroad: float = 0.032
+    fix_apd: bool = True
+    toler: float = 0.000001
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "mode", PdfEvaluationMode(self.mode))
+
+
+def _no_oxidation_cif(cif_file: str, output_dir: str) -> str:
+    """Write an oxidation-state-free CIF for diffpy and return its path."""
+    parser = CifParser(cif_file)
+    structure = parser.parse_structures(primitive=True)[0]
+    structure.remove_oxidation_states()
+
+    cif_pym = os.path.join(
+        output_dir,
+        f"{os.path.splitext(os.path.basename(cif_file))[0]}_pym.cif",
+    )
+    CifWriter(structure, symprec=0.1).write_file(cif_pym)
+    return cif_pym
+
+
+def _set_CsPbBr3_constrain(
+    pdf_calculator_object: PdfFit,
+    phase_idx: int = 1,
+    fix_apd: bool = True,
+) -> None:
+    """Apply the CsPbBr3 pdffit2 constraints from the LDRD helper."""
+    pf = pdf_calculator_object
+    pf.setphase(phase_idx)
+
+    pf.constrain(pf.lat(1), "@11")
+    pf.constrain(pf.lat(2), "@12")
+    pf.constrain(pf.lat(3), "@13")
+    pf.setpar(11, pf.lat(1))
+    pf.setpar(12, pf.lat(2))
+    pf.setpar(13, pf.lat(3))
+
+    pf.constrain("pscale", "@111")
+    pf.setpar(111, 1.0)
+
+    pf.constrain(pf.delta2, "@122")
+    pf.setpar(122, 6.87)
+    pf.fixpar(122)
+
+    pf.constrain(pf.spdiameter, "@133")
+    pf.setpar(133, 80)
+
+    for idx in range(1, 5):
+        pf.constrain(pf.u11(idx), "@101")
+        pf.constrain(pf.u22(idx), "@101")
+        pf.constrain(pf.u33(idx), "@101")
+    pf.setpar(101, 0.029385)
+
+    for idx in range(5, 9):
+        pf.constrain(pf.u11(idx), "@102")
+        pf.constrain(pf.u22(idx), "@102")
+        pf.constrain(pf.u33(idx), "@102")
+    pf.setpar(102, 0.027296)
+
+    for idx in range(9, 17):
+        pf.constrain(pf.u11(idx), "@103")
+        pf.constrain(pf.u22(idx), "@103")
+        pf.constrain(pf.u33(idx), "@103")
+    pf.setpar(103, 0.041577)
+
+    for idx in range(17, 21):
+        pf.constrain(pf.u11(idx), "@104")
+        pf.constrain(pf.u22(idx), "@104")
+        pf.constrain(pf.u33(idx), "@104")
+    pf.setpar(104, 0.028164)
+
+    if fix_apd:
+        for par in [101, 102, 103, 104]:
+            pf.fixpar(par)
+
+
+def _pdffit2_CsPbX3(
+    gr_data: str,
+    cif_list: list[str],
+    output_dir: str,
+    config: PdfFitConfig,
+) -> PdfFit:
+    """Run the LDRD CsPbX3 pdffit2 refinement and return the PdfFit object."""
+    pym_cif = [_no_oxidation_cif(cif, output_dir) for cif in cif_list]
+
+    pf = PdfFit()
+    pf.read_data(gr_data, "X", config.qmax, config.qdamp)
+
+    for pym in pym_cif:
+        stru = loadStructure(pym)
+        stru.Uisoequiv = 0.04
+        stru.title = os.path.basename(pym)[:-4]
+        pf.add_structure(stru)
+
+    if len(cif_list) == 1 and "CsPbBr" in os.path.basename(cif_list[0]):
+        _set_CsPbBr3_constrain(pf, phase_idx=1, fix_apd=config.fix_apd)
+
+    pf.constrain(pf.dscale, "@902")
+    pf.setpar(902, 1.0)
+    pf.setvar(pf.qdamp, config.qdamp)
+    pf.setvar(pf.qbroad, config.qbroad)
+
+    pf.pdfrange(1, 2.5, config.rmax)
+    pf.refine(toler=config.toler)
+    return pf
+
+
 class HalideEvaluation:
     """Evaluation function that reads QEPro and pdfstream data from Tiled and
-    computes optical properties (Peak, FWHM, PLQY) plus G(r) Pearson
-    correlations (corr_CsBr, corr_CsPbBr3, corr_Cs4PbBr6) for the halide
-    perovskite agent.
+    computes optical properties (Peak, FWHM, PLQY), raw G(r) Pearson
+    correlations, and optionally pdffit2-refined PDF correlations for the
+    halide perovskite agent.
 
     Parameters
     ----------
@@ -74,6 +220,10 @@ class HalideEvaluation:
         Percentile range for PL filtering.  Default ``[40, 100]``.
     percent_range_abs : list[float]
         Percentile range for absorbance filtering.  Default ``[10, 70]``.
+    pdf_fit_config : PdfFitConfig or None
+        Configuration for PDF evaluation mode and pdffit2 refinement.  Default
+        mode uses fitted PDF correlations as objectives and records raw
+        correlations as tracking metrics.
     """
 
     def __init__(
@@ -87,6 +237,7 @@ class HalideEvaluation:
         percent_range_pl: list[float] | None = None,
         percent_range_abs: list[float] | None = None,
         peak_target: float = 660,
+        pdf_fit_config: PdfFitConfig | None = None,
     ):
         self.tiled_client = tiled_client
         self.sandbox_client = sandbox_client
@@ -101,6 +252,7 @@ class HalideEvaluation:
             percent_range_abs if percent_range_abs is not None else [10, 70]
         )
         self.peak_target = peak_target
+        self.pdf_fit_config = pdf_fit_config or PdfFitConfig()
 
     # ------------------------------------------------------------------
     # Internal helpers (exposed for testability)
@@ -158,9 +310,8 @@ class HalideEvaluation:
             f"original_run_uid={uid!r} after {_TILED_MAX_RETRIES} attempts."
         )
 
-    def _process_pdf(self, pdf_data: dict) -> dict:
-        """Compute Pearson correlations of the measured G(r) against the three
-        simulated reference phases bundled in scripts/Matt_multi_phase/.
+    def _raw_pdf_correlations(self, pdf_data: dict) -> dict:
+        """Compute raw measured-G(r) correlations against simulated references.
 
         Parameters
         ----------
@@ -180,13 +331,95 @@ class HalideEvaluation:
             list(_SIMULATED_GR_FILES),
             os.path.abspath(_SIMULATED_GR_PATH),
         )
-        # raw keys look like "CsBr.gr correlation"; map to clean names
-        name_map = {
-            "CsBr.gr correlation":    "corr_CsBr",
-            "CsPbBr3.gr correlation": "corr_CsPbBr3",
-            "Cs4PbBr6.gr correlation": "corr_Cs4PbBr6",
-        }
-        return {name_map.get(k, k): v for k, v in raw.items()}
+        return {_RAW_PDF_NAME_MAP.get(k, k): v for k, v in raw.items()}
+
+    @staticmethod
+    def _pearson_to_profile(
+        r_exp: np.ndarray,
+        g_exp: np.ndarray,
+        r_ref: np.ndarray,
+        g_ref: np.ndarray,
+    ) -> float:
+        """Correlate a reference profile to measured G(r) on the measured grid."""
+        r_exp = np.asarray(r_exp)
+        g_exp = np.asarray(g_exp)
+        r_ref = np.asarray(r_ref)
+        g_ref = np.asarray(g_ref)
+
+        exp_mask = np.isfinite(r_exp) & np.isfinite(g_exp) & (r_exp >= 2.0) & (r_exp <= 20.0)
+        ref_mask = np.isfinite(r_ref) & np.isfinite(g_ref)
+        if exp_mask.sum() < 2 or ref_mask.sum() < 2:
+            raise ValueError("Not enough finite PDF points to compute Pearson correlation.")
+
+        r_slice = r_exp[exp_mask]
+        g_slice = g_exp[exp_mask]
+        ref_sort = np.argsort(r_ref[ref_mask])
+        g_ref_i = np.interp(r_slice, r_ref[ref_mask][ref_sort], g_ref[ref_mask][ref_sort])
+        pearson_r = float(np.corrcoef(g_slice, g_ref_i)[0, 1])
+        if not np.isfinite(pearson_r):
+            raise ValueError("PDF fit correlation is not finite.")
+        return pearson_r
+
+    def _fit_pdf_correlations(self, pdf_data: dict) -> dict:
+        """Run pdffit2 phase fits and correlate measured G(r) to each fit."""
+        r_exp = np.asarray(pdf_data["gr_r"])
+        g_exp = np.asarray(pdf_data["gr_G"])
+        fit_mask = np.isfinite(r_exp) & np.isfinite(g_exp)
+        if fit_mask.sum() < 2:
+            raise ValueError("Not enough finite PDF points to fit G(r).")
+
+        fit_rmax = min(self.pdf_fit_config.rmax, float(np.max(r_exp[fit_mask])))
+        if fit_rmax <= 2.5:
+            raise ValueError(
+                f"PDF fit rmax must be greater than 2.5 A; measured rmax is {fit_rmax}."
+            )
+        fit_config = replace(self.pdf_fit_config, rmax=fit_rmax)
+
+        with TemporaryDirectory() as tempdir:
+            gr_path = os.path.join(tempdir, "measured.gr")
+            np.savetxt(gr_path, np.column_stack((r_exp[fit_mask], g_exp[fit_mask])), fmt="%.10g %.10g")
+
+            results = {}
+            for phase_name, cif_file in _PDF_FIT_CIF_FILES.items():
+                cif_path = os.path.join(_SIMULATED_GR_PATH, cif_file)
+                pf = _pdffit2_CsPbX3(
+                    gr_path,
+                    [cif_path],
+                    output_dir=tempdir,
+                    config=fit_config,
+                )
+                results[f"pdf_fit_corr_{phase_name}"] = self._pearson_to_profile(
+                    r_exp,
+                    g_exp,
+                    np.asarray(pf.getR()),
+                    np.asarray(pf.getpdf_fit()),
+                )
+
+            return results
+
+    def _process_pdf(self, pdf_data: dict, uid: str | None = None) -> dict:
+        """Compute PDF outcomes according to the configured evaluation mode."""
+        results = self._raw_pdf_correlations(pdf_data)
+
+        if self.pdf_fit_config.mode is PdfEvaluationMode.RAW_ONLY:
+            return results
+
+        try:
+            results.update(self._fit_pdf_correlations(pdf_data))
+        except Exception as exc:
+            if self.pdf_fit_config.mode is PdfEvaluationMode.PDF_FIT_OBJECTIVES:
+                msg = "PDF fitting failed"
+                if uid is not None:
+                    msg += f" for uid={uid!r}"
+                raise RuntimeError(msg) from exc
+
+            logger.warning(
+                "PDF fitting failed for uid=%r; continuing with raw PDF correlations only.",
+                uid,
+                exc_info=True,
+            )
+
+        return results
 
     def _read_tiled_data(self, uid: str) -> tuple[dict, dict, dict, list[dict] | None]:
         """Read all required streams from Tiled, retrying until all are available.
@@ -520,7 +753,8 @@ class HalideEvaluation:
             One outcome dict per suggestion, with keys ``Peak``,
             ``peak_distance``, ``log_FWHM``, ``log_PLQY``,
             ``corr_CsBr``, ``corr_CsPbBr3``, ``corr_Cs4PbBr6``,
-            and ``_id``.
+            optional ``pdf_fit_corr_CsBr``, ``pdf_fit_corr_CsPbBr3``,
+            ``pdf_fit_corr_Cs4PbBr6``, and ``_id``.
         """
         qepro_fl, qepro_abs, metadata, batch_info = self._read_tiled_data(uid)
 
@@ -538,7 +772,7 @@ class HalideEvaluation:
 
         # --- PDF correlations ---
         pdf_data = self._read_pdfstream_data(uid)
-        pdf_correlations = self._process_pdf(pdf_data)
+        pdf_correlations = self._process_pdf(pdf_data, uid=uid)
 
         return [
             {

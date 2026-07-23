@@ -38,7 +38,15 @@ _utils_dir = os.path.join(os.path.dirname(__file__), "utils")
 if _utils_dir not in sys.path:
     sys.path.insert(0, _utils_dir)
 
-from evaluation_halide import HalideEvaluation
+from evaluation_halide import HalideEvaluation, PdfEvaluationMode, PdfFitConfig
+
+
+RAW_PDF_CORRELATION_METRICS = ("corr_CsBr", "corr_CsPbBr3", "corr_Cs4PbBr6")
+PDF_FIT_CORRELATION_METRICS = (
+    "pdf_fit_corr_CsBr",
+    "pdf_fit_corr_CsPbBr3",
+    "pdf_fit_corr_Cs4PbBr6",
+)
 
 
 # ---------------------------------------------------------------------------
@@ -105,17 +113,28 @@ def build_dofs(use_OAm: bool = False) -> list[RangeDOF]:
 # ---------------------------------------------------------------------------
 
 
-def build_objectives() -> list[Objective]:
+def build_objectives(pdf_fit_config: PdfFitConfig | None = None) -> list[Objective]:
     """Build objectives for the halide perovskite optimization."""
+    pdf_fit_config = pdf_fit_config or PdfFitConfig()
+    if pdf_fit_config.mode is PdfEvaluationMode.PDF_FIT_OBJECTIVES:
+        pdf_objectives = [
+            Objective(name="pdf_fit_corr_CsPbBr3", minimize=False),
+            Objective(name="pdf_fit_corr_CsBr", minimize=True),
+            Objective(name="pdf_fit_corr_Cs4PbBr6", minimize=True),
+        ]
+    else:
+        pdf_objectives = [
+            Objective(name="corr_CsPbBr3", minimize=False),
+            Objective(name="corr_CsBr", minimize=True),
+            Objective(name="corr_Cs4PbBr6", minimize=True),
+        ]
+
     return [
         Objective(name="log_FWHM", minimize=True),
         Objective(name="log_PLQY", minimize=False),
         Objective(name="peak_distance", minimize=True),
-        # G(r) Pearson correlations against simulated reference phases.
-        # Maximise CsPbBr3 (desired phase) and minimise the impurity phases.
-        Objective(name="corr_CsPbBr3", minimize=False),
-        Objective(name="corr_CsBr", minimize=True),
-        Objective(name="corr_Cs4PbBr6", minimize=True),
+        # PDF correlations against CsPbBr3 (desired) and impurity phases.
+        *pdf_objectives,
         # Alternative scalar PDF objective to use once HalideEvaluation returns it:
         # pdf_score = corr_CsPbBr3 - 0.5 * (max(0, corr_CsBr) + max(0, corr_Cs4PbBr6))
         # Objective(name="pdf_score", minimize=False),
@@ -134,6 +153,22 @@ def build_outcome_constraints(
         OutcomeConstraint(f"p >= {peak_down}", p=peak_metric),
         OutcomeConstraint(f"p <= {peak_up}", p=peak_metric),
     ]
+
+
+def register_tracking_metrics(agent, metric_names: tuple[str, ...]) -> None:
+    """Register non-objective outcomes as Ax tracking metrics."""
+    if not metric_names:
+        return
+    agent.ax_client.configure_metrics([IMetric(name=name) for name in metric_names])
+
+
+def pdf_tracking_metrics(pdf_fit_config: PdfFitConfig) -> tuple[str, ...]:
+    """Return PDF metrics that should be recorded but not optimized."""
+    if pdf_fit_config.mode is PdfEvaluationMode.PDF_FIT_OBJECTIVES:
+        return RAW_PDF_CORRELATION_METRICS
+    if pdf_fit_config.mode is PdfEvaluationMode.RAW_OBJECTIVES_PDF_FIT_TRACKED:
+        return PDF_FIT_CORRELATION_METRICS
+    return ()
 
 
 # ---------------------------------------------------------------------------
@@ -241,6 +276,7 @@ def build_agent(
     use_OAm: bool = False,
     agent_data_path: str = AGENT_DATA_PATH,
     plqy_params: list | None = None,
+    pdf_fit_config: PdfFitConfig | None = None,
     http_server_uri: str = HTTP_SERVER_URI,
     http_api_key: str = HTTP_API_KEY,
     zmq_consumer_addr: str = ZMQ_CONSUMER_ADDR,
@@ -262,6 +298,11 @@ def build_agent(
         Path to historical data CSV for seeding the agent.
     plqy_params : list
         PLQY reference parameters for the evaluation function.
+    pdf_fit_config : PdfFitConfig or None
+        Controls PDF evaluation mode.  Raw-only mode optimizes raw
+        correlations.  Fitted-objective mode optimizes fitted correlations and
+        tracks raw correlations.  Raw-objective fitted-tracking mode optimizes
+        raw correlations and tracks fitted correlations when fitting succeeds.
     http_server_uri : str
         Queueserver HTTP URI.
     http_api_key : str
@@ -283,10 +324,12 @@ def build_agent(
     """
     if plqy_params is None:
         plqy_params = PLQY_PARAMS
+    if pdf_fit_config is None:
+        pdf_fit_config = PdfFitConfig()
 
     # Build components
     dofs = build_dofs(use_OAm=use_OAm)
-    objectives = build_objectives()
+    objectives = build_objectives(pdf_fit_config=pdf_fit_config)
     outcome_constraints = build_outcome_constraints(peak_target, peak_tolerance)
 
     # Tiled clients for evaluation function
@@ -299,6 +342,7 @@ def build_agent(
         sandbox_client=sandbox_client,
         plqy_params=plqy_params,
         peak_target=peak_target,
+        pdf_fit_config=pdf_fit_config,
     )
 
     # Always enable X-ray acquisition; merge with any caller overrides.
@@ -342,6 +386,8 @@ def build_agent(
             outcome_constraints=outcome_constraints,
             checkpoint_path=checkpoint_path,
         )
+
+    register_tracking_metrics(agent, pdf_tracking_metrics(pdf_fit_config))
 
     # Seed with historical data
     if agent_data_path and os.path.exists(agent_data_path):
